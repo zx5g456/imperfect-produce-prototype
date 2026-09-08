@@ -2,7 +2,19 @@
 
 An independent, Woolworths-inspired shopping prototype for evaluating how shoppers understand cosmetic appearance, quality status, current price and savings for discounted imperfect produce.
 
-This is a university research prototype. It is not affiliated with Woolworths and does not process real purchases or store participant responses.
+This is a university research prototype. It is not affiliated with Woolworths and does not process real purchases. When a facilitator starts a session, it stores anonymous interaction events and task timing; questionnaire responses remain in the team's approved form.
+
+## Live deployment
+
+- **Prototype:** <https://fresh-choice-imperfect-produce.zx5g456.workers.dev>
+- **API status:** <https://fresh-choice-research-api.zx5g456.workers.dev/health>
+
+## Architecture
+
+- **Frontend:** standard Next.js 16 App Router, exported and served with Cloudflare Workers Static Assets.
+- **Backend:** an independent Python FastAPI service.
+- **Database:** local SQLite during development and Cloudflare D1 in production.
+- **Source control:** GitHub Pull Requests, with automatic checks on every push and Pull Request.
 
 ## Prototype flows
 
@@ -22,15 +34,18 @@ The values in `data/products.json` are sample data and are deliberately marked `
 
 ```bash
 npm install
-npm run dev
+npm run setup:api
+npm run dev:all
 ```
 
-Open `http://localhost:3000`.
+Open `http://localhost:3000`. The frontend runs on port 3000 and the API on port 8787. The local database is created automatically under `backend/.data/`.
 
 ## Checks
 
 ```bash
 npm run verify:data
+npm run typecheck
+npm run api:test
 npm run build
 ```
 
@@ -42,10 +57,14 @@ Use GitHub Issues for tasks, one feature branch per issue, and Pull Requests for
 
 ## Key files
 
-- `app/page.tsx` — shopping demo and researcher-controlled evaluation flows
-- `data/products.json` — single source of truth for product and price information
+- `app/page.tsx` — shopping demo, researcher-controlled evaluation flows and anonymous event capture
+- `lib/research-api.ts` — typed connection between the Next.js frontend and Python API
+- `backend/src/main.py` — FastAPI routes plus local SQLite and D1 adapters
+- `backend/migrations/0001_initial.sql` — production D1/local SQLite schema and initial products
+- `data/products.json` — offline frontend fallback used if the API is unavailable
 - `scripts/verify-product-data.mjs` — product-data consistency check
 - `docs/evaluation-mapping.md` — mapping from evaluation questions to prototype evidence
+- `docs/deployment.md` — Cloudflare Workers and D1 deployment guide
 
 ## Image credits
 

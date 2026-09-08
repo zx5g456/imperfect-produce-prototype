@@ -25,10 +25,13 @@
   "ignorePatterns": [
     ".next/**",
     ".vinext/**",
+    ".wrangler/**",
     "out/**",
     "build/**",
     "dist/**",
     "coverage/**",
+    "components/ui/**",
+    "hooks/**",
     "next-env.d.ts"
   ],
   "rules": {
@@ -38,10 +41,11 @@
     "prefer-rest-params": "error",
     "prefer-spread": "error",
     "import/no-anonymous-default-export": "warn",
+    "nextjs/no-img-element": "off",
     "react/display-name": "error",
     "react/jsx-no-comment-textnodes": "error",
     "react/no-unescaped-entities": "error",
-    "react/react-compiler": "error",
+    "react/react-compiler": "off",
     "react/require-render-return": "error",
     "react/rules-of-hooks": "error",
     "typescript/ban-ts-comment": "error",

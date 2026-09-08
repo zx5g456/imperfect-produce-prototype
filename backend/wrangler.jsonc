@@ -1,0 +1,28 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "fresh-choice-research-api",
+  "main": "src/main.py",
+  "workers_dev": true,
+  "preview_urls": true,
+  "compatibility_date": "2026-09-08",
+  "compatibility_flags": ["python_workers"],
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+    },
+    "traces": {
+      "enabled": true,
+      "head_sampling_rate": 0.01,
+    },
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "fresh-choice-research",
+      "database_id": "717595e6-06b6-48e8-9b14-18d2119f7cef",
+      "migrations_dir": "migrations",
+    },
+  ],
+}

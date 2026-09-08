@@ -18,7 +18,7 @@ import {
   Sprout,
   Tag,
 } from 'lucide-react';
-import productsData from '@/data/products.json';
+import fallbackProducts from '@/data/products.json';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -28,10 +28,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  completeStudySession,
+  createStudySession,
+  loadProducts,
+  recordEvent,
+  type Condition,
+  type Product,
+  type ProductKind,
+  type StudyMode,
+} from '@/lib/research-api';
 
-type Product = (typeof productsData)[number];
-type Condition = 'A' | 'B';
-type StudyMode = 'browse' | 'comprehension' | 'comparison';
+const initialProducts = fallbackProducts as Product[];
 
 const MODE_LABELS: Record<StudyMode, string> = {
   browse: 'Open shopping demo',
@@ -311,6 +319,10 @@ function ProductDetail({
 }
 
 export default function Home() {
+  const [products, setProducts] = useState<Product[]>(initialProducts);
+  const [dataSource, setDataSource] = useState<
+    'loading' | 'database' | 'fallback'
+  >('loading');
   const [condition, setCondition] = useState<Condition>('B');
   const [studyMode, setStudyMode] = useState<StudyMode>('browse');
   const [scenarioIndex, setScenarioIndex] = useState(0);
@@ -323,8 +335,30 @@ export default function Home() {
   const [completed, setCompleted] = useState(false);
   const [copied, setCopied] = useState(false);
   const [startedAt, setStartedAt] = useState<number | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [startingSession, setStartingSession] = useState(false);
+  const [recordingError, setRecordingError] = useState(false);
 
-  const activeProduct = productsData[scenarioIndex];
+  const activeProduct = products[scenarioIndex] ?? products[0]!;
+
+  useEffect(() => {
+    const controller = new AbortController();
+    loadProducts(controller.signal)
+      .then((databaseProducts) => {
+        if (databaseProducts.length > 0) {
+          setProducts(databaseProducts);
+          setScenarioIndex((current) =>
+            Math.min(current, databaseProducts.length - 1),
+          );
+          setDataSource('database');
+        } else {
+          setDataSource('fallback');
+        }
+      })
+      .catch(() => setDataSource('fallback'));
+
+    return () => controller.abort();
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -343,7 +377,7 @@ export default function Home() {
     if (
       Number.isInteger(urlScenario) &&
       urlScenario >= 1 &&
-      urlScenario <= productsData.length
+      urlScenario <= initialProducts.length
     )
       setScenarioIndex(urlScenario - 1);
   }, []);
@@ -361,8 +395,8 @@ export default function Home() {
   }, [condition, scenarioIndex, studyMode]);
 
   const visibleProducts = useMemo(() => {
-    return studyMode === 'browse' ? productsData : [activeProduct];
-  }, [activeProduct, studyMode]);
+    return studyMode === 'browse' ? products : [activeProduct];
+  }, [activeProduct, products, studyMode]);
 
   function resetSession(next?: {
     mode?: StudyMode;
@@ -375,7 +409,78 @@ export default function Home() {
     setSelected(null);
     setChosenKey(null);
     setCompleted(false);
-    setStartedAt(Date.now());
+    setStartedAt(null);
+    setSessionId(null);
+    setRecordingError(false);
+  }
+
+  function elapsedMs() {
+    return startedAt ? Math.max(0, Date.now() - startedAt) : undefined;
+  }
+
+  function logInteraction(
+    eventType: 'product_details_opened' | 'product_chosen',
+    product: Product,
+    kind: ProductKind,
+  ) {
+    if (!sessionId) return;
+    void recordEvent(sessionId, {
+      eventType,
+      productId: product.id,
+      productKind: kind,
+      elapsedMs: elapsedMs(),
+      metadata: { condition, studyMode, scenario: scenarioIndex + 1 },
+    }).catch(() => setRecordingError(true));
+  }
+
+  function openDetails(product: Product, kind: ProductKind) {
+    setSelected({ product, kind });
+    logInteraction('product_details_opened', product, kind);
+  }
+
+  function chooseProduct(product: Product, kind: ProductKind) {
+    setChosenKey(`${product.id}-${kind}`);
+    logInteraction('product_chosen', product, kind);
+  }
+
+  async function startParticipantSession() {
+    const localStartedAt = Date.now();
+    setStartingSession(true);
+    setRecordingError(false);
+    setChosenKey(null);
+    setCompleted(false);
+
+    try {
+      const session = await createStudySession({
+        studyMode,
+        condition,
+        scenarioIndex: scenarioIndex + 1,
+      });
+      setSessionId(session.id);
+      setDataSource('database');
+    } catch {
+      setSessionId(null);
+      setRecordingError(true);
+    } finally {
+      setStartedAt(localStartedAt);
+      setStartingSession(false);
+      setResearcherOpen(false);
+    }
+  }
+
+  function markTaskComplete() {
+    setCompleted(true);
+    if (!sessionId || !startedAt) return;
+
+    const [productId, productKind] = chosenKey?.split('-') ?? [];
+    void completeStudySession(sessionId, {
+      elapsedMs: Date.now() - startedAt,
+      productId,
+      productKind:
+        productKind === 'standard' || productKind === 'imperfect'
+          ? productKind
+          : undefined,
+    }).catch(() => setRecordingError(true));
   }
 
   async function copySessionLink() {
@@ -415,12 +520,12 @@ export default function Home() {
             </span>
           </a>
 
-          <label className="hidden flex-1 items-center gap-3 rounded-full border border-[#b7c5bc] bg-[#fbfcfa] px-5 py-3 md:flex">
+          <div className="hidden flex-1 items-center gap-3 rounded-full border border-[#b7c5bc] bg-[#fbfcfa] px-5 py-3 md:flex">
             <Search aria-hidden="true" className="size-5 text-[#456154]" />
             <span className="text-sm text-[#617269]">
               Search fruit, vegetables and more
             </span>
-          </label>
+          </div>
 
           <div className="ml-auto flex items-center gap-2">
             <Button
@@ -475,7 +580,7 @@ export default function Home() {
               <div>
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="text-xs font-black uppercase tracking-[0.12em] text-[#176c36]">
-                    Research task {scenarioIndex + 1} of {productsData.length}
+                    Research task {scenarioIndex + 1} of {products.length}
                   </p>
                   <span className="rounded-full bg-[#123f2b] px-2.5 py-1 text-[10px] font-bold text-white">
                     Condition {condition}
@@ -489,7 +594,9 @@ export default function Home() {
             <div className="flex items-center gap-2 text-xs text-[#5c6f64]">
               <Clock3 className="size-4" aria-hidden="true" />
               {startedAt
-                ? 'Session timer started'
+                ? sessionId && !recordingError
+                  ? 'Anonymous recording active'
+                  : 'Session active · recording unavailable'
                 : 'Open Research setup to start'}
             </div>
           </div>
@@ -533,7 +640,7 @@ export default function Home() {
           </div>
           {studyMode === 'browse' ? (
             <p className="text-sm text-[#65746b]">
-              {productsData.length} products · Condition {condition}
+              {products.length} products · Condition {condition}
             </p>
           ) : (
             <button
@@ -551,20 +658,16 @@ export default function Home() {
               product={activeProduct}
               condition={condition}
               kind="standard"
-              onDetails={() =>
-                setSelected({ product: activeProduct, kind: 'standard' })
-              }
-              onChoose={() => setChosenKey(`${activeProduct.id}-standard`)}
+              onDetails={() => openDetails(activeProduct, 'standard')}
+              onChoose={() => chooseProduct(activeProduct, 'standard')}
               chosen={chosenKey === `${activeProduct.id}-standard`}
             />
             <ProductCard
               product={activeProduct}
               condition={condition}
               kind="imperfect"
-              onDetails={() =>
-                setSelected({ product: activeProduct, kind: 'imperfect' })
-              }
-              onChoose={() => setChosenKey(`${activeProduct.id}-imperfect`)}
+              onDetails={() => openDetails(activeProduct, 'imperfect')}
+              onChoose={() => chooseProduct(activeProduct, 'imperfect')}
               chosen={chosenKey === `${activeProduct.id}-imperfect`}
             />
           </div>
@@ -578,8 +681,8 @@ export default function Home() {
                 product={product}
                 condition={condition}
                 kind="imperfect"
-                onDetails={() => setSelected({ product, kind: 'imperfect' })}
-                onChoose={() => setChosenKey(`${product.id}-imperfect`)}
+                onDetails={() => openDetails(product, 'imperfect')}
+                onChoose={() => chooseProduct(product, 'imperfect')}
                 chosen={chosenKey === `${product.id}-imperfect`}
               />
             ))}
@@ -599,13 +702,13 @@ export default function Home() {
                 </p>
                 <p className="mt-1 text-xs leading-5 text-[#65746b]">
                   Record the participant’s answer, time, hesitation and help
-                  requests on the observation sheet. This prototype does not
-                  store responses.
+                  requests on the observation sheet. When recording is active,
+                  this prototype stores anonymous clicks and task timing only.
                 </p>
               </div>
             </div>
             <Button
-              onClick={() => setCompleted(true)}
+              onClick={markTaskComplete}
               disabled={!chosenKey}
               className="h-11 shrink-0 rounded-xl bg-[#173f2d] px-5 font-bold"
             >
@@ -699,8 +802,7 @@ export default function Home() {
           <DialogFooter className="mt-2 rounded-b-3xl">
             <Button
               onClick={() =>
-                selected &&
-                setChosenKey(`${selected.product.id}-${selected.kind}`)
+                selected && chooseProduct(selected.product, selected.kind)
               }
               className="h-11 rounded-xl bg-[#1b7f3a] px-5 font-bold"
             >
@@ -748,7 +850,7 @@ export default function Home() {
                 2. Product scenario
               </legend>
               <div className="mt-3 grid grid-cols-3 gap-2">
-                {productsData.map((product, index) => (
+                {products.map((product, index) => (
                   <button
                     key={product.id}
                     onClick={() => resetSession({ scenario: index })}
@@ -807,6 +909,14 @@ export default function Home() {
                     product name, image, quantity, unit, original price and
                     current price against the approved source sheet.
                   </p>
+                  <p className="mt-2 font-semibold">
+                    Data source:{' '}
+                    {dataSource === 'database'
+                      ? 'SQLite/D1 API connected'
+                      : dataSource === 'loading'
+                        ? 'checking API…'
+                        : 'bundled fallback data (recording unavailable)'}
+                  </p>
                 </div>
               </div>
             </div>
@@ -826,13 +936,11 @@ export default function Home() {
               {copied ? 'Link copied' : 'Copy session link'}
             </Button>
             <Button
-              onClick={() => {
-                setStartedAt(Date.now());
-                setResearcherOpen(false);
-              }}
+              onClick={startParticipantSession}
+              disabled={startingSession}
               className="h-11 rounded-xl bg-[#1b7f3a] px-5 font-bold"
             >
-              Start participant session
+              {startingSession ? 'Starting…' : 'Start participant session'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -848,21 +956,21 @@ export default function Home() {
               Task marked complete
             </DialogTitle>
             <DialogDescription>
-              Record the result in the observation sheet, then ask the
-              participant to complete the team’s Microsoft Forms questions.
+              {sessionId && !recordingError
+                ? 'Anonymous interaction and completion time were saved. Continue with the team’s Microsoft Forms questions.'
+                : 'The interface completed the task, but the recording API was unavailable. Record the result on the observation sheet.'}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="mt-2 rounded-b-3xl">
             <Button
               onClick={() => {
-                const next = (scenarioIndex + 1) % productsData.length;
+                const next = (scenarioIndex + 1) % products.length;
                 resetSession({ scenario: next });
                 setCompleted(false);
               }}
               className="h-11 rounded-xl bg-[#1b7f3a] px-5 font-bold"
             >
-              Continue to scenario{' '}
-              {((scenarioIndex + 1) % productsData.length) + 1}
+              Continue to scenario {((scenarioIndex + 1) % products.length) + 1}
             </Button>
           </DialogFooter>
         </DialogContent>

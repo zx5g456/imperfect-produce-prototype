@@ -5,7 +5,7 @@
 1. Create or choose a GitHub Issue with one clear outcome.
 2. Update local `main`, then create a short branch such as `feat/label-detail`, `fix/price-copy`, or `research/scenario-2`.
 3. Keep changes focused. Do not combine visual redesign, research wording and product-data changes in one Pull Request.
-4. Run `npm run verify:data` and `npm run build` before opening the Pull Request.
+4. Run `npm run verify:data`, `npm run typecheck`, `npm run api:test` and `npm run build` before opening the Pull Request.
 5. Link the Issue in the Pull Request and request at least one teammate review.
 6. Use squash merge after approval and delete the merged branch.
 
@@ -24,6 +24,8 @@ Recommended repository rules:
 - Keep unconfirmed source values marked `not verified`.
 - Record the deployed version and session URL used for each participant group.
 - Do not add names, emails, consent records or other identifying participant data to this repository.
+- Represent production product-data changes in a new reviewed migration under `backend/migrations/`; never edit a migration that has already been applied.
+- Never commit `.env`, `.dev.vars`, a local `.sqlite3` file or exported evaluation data.
 
 ## Pull Request checklist
 
@@ -31,5 +33,6 @@ Recommended repository rules:
 - Participant-facing wording is plain and neutral.
 - Keyboard and mobile use still work.
 - Product-data verification passes.
+- Python API tests and TypeScript checks pass.
 - The production build passes.
 - Screens shown to participants have a stable Condition and scenario URL.
