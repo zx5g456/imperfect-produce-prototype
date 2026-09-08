@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(
-    'https://fresh-choice-imperfect-produce-7255.zippy-thyme-5644.chatgpt.site',
+    'https://fresh-choice-imperfect-produce-7255.limike999999.chatgpt.site',
   ),
   title: 'Fresh Choice — Imperfect Produce Research Prototype',
   description:
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
       'Compare clear product labels, quality information, prices and savings in a controlled shopping prototype.',
     images: [
       {
-        url: 'https://fresh-choice-imperfect-produce-7255.zippy-thyme-5644.chatgpt.site/og.png',
+        url: 'https://fresh-choice-imperfect-produce-7255.limike999999.chatgpt.site/og.png',
         width: 1200,
         height: 630,
         alt: 'Fresh Choice imperfect produce research prototype',
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
     description:
       'Compare clear product labels, quality information, prices and savings in a controlled shopping prototype.',
     images: [
-      'https://fresh-choice-imperfect-produce-7255.zippy-thyme-5644.chatgpt.site/og.png',
+      'https://fresh-choice-imperfect-produce-7255.limike999999.chatgpt.site/og.png',
     ],
   },
 };
