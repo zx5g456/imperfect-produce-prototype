@@ -1,0 +1,47 @@
+[
+  {
+    "id": "carrots",
+    "category": "Fresh produce",
+    "standardName": "Fresh carrots",
+    "imperfectName": "Naturally wonky carrots",
+    "standardImage": "/products/standard-carrot.jpg",
+    "imperfectImage": "/products/imperfect-carrot.jpg",
+    "unit": "1 kg bag",
+    "originalPriceCents": 390,
+    "currentPriceCents": 250,
+    "appearance": "Forked or curved from growing around stones in the soil.",
+    "quality": "Fresh eating quality — shape only, no damage.",
+    "scenario": "You are buying carrots for a soup tonight. Find the current price and decide whether you need more information.",
+    "sourceStatus": "not verified"
+  },
+  {
+    "id": "apples",
+    "category": "Fresh produce",
+    "standardName": "Red apples",
+    "imperfectName": "Naturally unique apples",
+    "standardImage": "/products/standard-apple.jpg",
+    "imperfectImage": "/products/imperfect-apple.jpg",
+    "unit": "1 kg bag",
+    "originalPriceCents": 550,
+    "currentPriceCents": 380,
+    "appearance": "Uneven colour or shape from natural growing conditions.",
+    "quality": "Crisp and ready to eat — appearance only.",
+    "scenario": "You are choosing apples for weekday snacks. Find the price, saving and quality status before deciding.",
+    "sourceStatus": "not verified"
+  },
+  {
+    "id": "capsicum",
+    "category": "Fresh produce",
+    "standardName": "Red capsicums",
+    "imperfectName": "Naturally quirky capsicums",
+    "standardImage": "/products/standard-capsicum.jpg",
+    "imperfectImage": "/products/imperfect-capsicum.jpg",
+    "unit": "500 g pack",
+    "originalPriceCents": 600,
+    "currentPriceCents": 420,
+    "appearance": "Curved or uneven shape that does not affect taste.",
+    "quality": "Fresh cooking quality — checked by our produce team.",
+    "scenario": "You need capsicums for dinner and are comparing value. Identify what looks different and what the price covers.",
+    "sourceStatus": "not verified"
+  }
+]

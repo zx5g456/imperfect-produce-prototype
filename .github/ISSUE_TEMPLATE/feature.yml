@@ -1,0 +1,31 @@
+name: Prototype change
+description: Propose one participant-facing or researcher-facing improvement.
+title: '[Prototype]: '
+labels: ['prototype']
+body:
+  - type: dropdown
+    id: evaluation-question
+    attributes:
+      label: Evaluation question
+      options:
+        - EQ 1.1 Label comprehension
+        - EQ 1.2 Information accuracy
+        - EQ 2.1 Shopping journey
+        - EQ 2.2 A/B comparison
+        - Technical maintenance
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: Describe what should be easier, clearer or more reliable.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance checks
+      description: List the observable checks that show the change is complete.
+    validations:
+      required: true
