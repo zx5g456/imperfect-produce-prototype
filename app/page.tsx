@@ -62,14 +62,18 @@ function ProductCard({
   kind,
   onDetails,
   onChoose,
+  onSave,
   chosen,
+  saved,
 }: {
   product: Product;
   condition: Condition;
   kind: 'standard' | 'imperfect';
   onDetails: () => void;
   onChoose: () => void;
+  onSave: () => void;
   chosen: boolean;
+  saved: boolean;
 }) {
   const enhanced = kind === 'imperfect' && condition === 'B';
   const price =
@@ -109,10 +113,12 @@ function ProductCard({
           </span>
         ) : null}
         <button
-          className="absolute right-4 top-4 grid size-10 place-items-center rounded-full bg-white/95 text-[#315643] shadow-sm transition hover:scale-105"
-          aria-label={`Save ${name}`}
+          onClick={onSave}
+          aria-pressed={saved}
+          className={`absolute right-4 top-4 grid size-10 place-items-center rounded-full bg-white/95 shadow-sm transition hover:scale-105 ${saved ? 'text-[#c8432c] ring-2 ring-[#c8432c]/20' : 'text-[#315643]'}`}
+          aria-label={`${saved ? 'Remove' : 'Save'} ${name} ${saved ? 'from' : 'to'} saved products`}
         >
-          <Heart className="size-4" />
+          <Heart className="size-4" fill={saved ? 'currentColor' : 'none'} />
         </button>
       </div>
 
@@ -168,6 +174,7 @@ function ProductCard({
         <div className="mt-auto grid grid-cols-[1fr_auto] gap-2 pt-5">
           <Button
             onClick={onChoose}
+            aria-pressed={chosen}
             className={`h-11 rounded-xl text-base font-bold ${chosen ? 'bg-[#0d5c2d]' : 'bg-[#1b7f3a] hover:bg-[#12692f]'}`}
           >
             {chosen ? (
@@ -323,7 +330,9 @@ export default function Home() {
     product: Product;
     kind: 'standard' | 'imperfect';
   } | null>(null);
-  const [chosenKey, setChosenKey] = useState<string | null>(null);
+  const [chosenKeys, setChosenKeys] = useState<string[]>([]);
+  const [savedKeys, setSavedKeys] = useState<string[]>([]);
+  const [showSavedOnly, setShowSavedOnly] = useState(false);
   const [researcherOpen, setResearcherOpen] = useState(false);
   const [completed, setCompleted] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -375,7 +384,7 @@ export default function Home() {
   function resetSession(next?: { condition?: Condition }) {
     if (next?.condition) setCondition(next.condition);
     setSelected(null);
-    setChosenKey(null);
+    setChosenKeys([]);
     setCompleted(false);
     setStartedAt(null);
     setSessionId(null);
@@ -407,15 +416,45 @@ export default function Home() {
   }
 
   function chooseProduct(product: Product, kind: ProductKind) {
-    setChosenKey(`${product.id}-${kind}`);
-    logInteraction('product_chosen', product, kind);
+    const key = `${product.id}-${kind}`;
+    const alreadyChosen = chosenKeys.includes(key);
+    const nextChosenKeys = alreadyChosen
+      ? chosenKeys.filter((chosenKey) => chosenKey !== key)
+      : [...chosenKeys, key];
+
+    setChosenKeys(nextChosenKeys);
+    if (sessionId) {
+      void recordEvent(sessionId, {
+        eventType: 'product_chosen',
+        productId: product.id,
+        productKind: kind,
+        elapsedMs: elapsedMs(),
+        metadata: {
+          condition,
+          studyMode,
+          displayScope: 'all-products',
+          selectionAction: alreadyChosen ? 'removed' : 'added',
+          selectedCount: nextChosenKeys.length,
+        },
+      }).catch(() => setRecordingError(true));
+    }
+  }
+
+  function toggleSaved(product: Product, kind: ProductKind) {
+    const key = `${product.id}-${kind}`;
+    const nextSavedKeys = savedKeys.includes(key)
+      ? savedKeys.filter((savedKey) => savedKey !== key)
+      : [...savedKeys, key];
+
+    setSavedKeys(nextSavedKeys);
+    if (nextSavedKeys.length === 0) setShowSavedOnly(false);
   }
 
   async function startParticipantSession() {
     const localStartedAt = Date.now();
     setStartingSession(true);
     setRecordingError(false);
-    setChosenKey(null);
+    setChosenKeys([]);
     setCompleted(false);
 
     try {
@@ -440,7 +479,8 @@ export default function Home() {
     setCompleted(true);
     if (!sessionId || !startedAt) return;
 
-    const [productId, productKind] = chosenKey?.split('-') ?? [];
+    const [productId, productKind] =
+      chosenKeys.length === 1 ? chosenKeys[0].split('-') : [];
     void completeStudySession(sessionId, {
       elapsedMs: Date.now() - startedAt,
       productId,
@@ -503,12 +543,25 @@ export default function Home() {
               <MapPin aria-hidden="true" /> St Lucia
             </Button>
             <Button
+              onClick={() => setShowSavedOnly((current) => !current)}
               variant="outline"
               size="icon-lg"
-              className="rounded-full"
-              aria-label="Saved products"
+              disabled={savedKeys.length === 0}
+              aria-pressed={showSavedOnly}
+              className={`relative rounded-full ${showSavedOnly ? 'border-[#c8432c] bg-[#fff2ef] text-[#c8432c]' : ''}`}
+              aria-label={
+                showSavedOnly ? 'Show all products' : 'Show saved products'
+              }
             >
-              <Heart aria-hidden="true" />
+              <Heart
+                aria-hidden="true"
+                fill={savedKeys.length > 0 ? 'currentColor' : 'none'}
+              />
+              {savedKeys.length > 0 && (
+                <span className="absolute -right-1 -top-1 grid size-5 place-items-center rounded-full bg-[#c8432c] text-[10px] font-black text-white">
+                  {savedKeys.length}
+                </span>
+              )}
             </Button>
             <Button
               size="icon-lg"
@@ -516,9 +569,9 @@ export default function Home() {
               aria-label="Shopping cart"
             >
               <ShoppingCart aria-hidden="true" />
-              {chosenKey && (
+              {chosenKeys.length > 0 && (
                 <span className="absolute -right-1 -top-1 grid size-5 place-items-center rounded-full bg-[#f4d44d] text-[10px] font-black text-[#263b2f]">
-                  1
+                  {chosenKeys.length}
                 </span>
               )}
             </Button>
@@ -611,7 +664,10 @@ export default function Home() {
           </div>
           {studyMode === 'browse' ? (
             <p className="text-sm text-[#65746b]">
-              {products.length} products · Condition {condition}
+              {showSavedOnly
+                ? `${savedKeys.length} saved products`
+                : `${products.length} products`}{' '}
+              · {chosenKeys.length} selected · Condition {condition}
             </p>
           ) : (
             <button
@@ -643,7 +699,9 @@ export default function Home() {
                     kind="standard"
                     onDetails={() => openDetails(product, 'standard')}
                     onChoose={() => chooseProduct(product, 'standard')}
-                    chosen={chosenKey === `${product.id}-standard`}
+                    onSave={() => toggleSaved(product, 'standard')}
+                    chosen={chosenKeys.includes(`${product.id}-standard`)}
+                    saved={savedKeys.includes(`${product.id}-standard`)}
                   />
                   <ProductCard
                     product={product}
@@ -651,7 +709,9 @@ export default function Home() {
                     kind="imperfect"
                     onDetails={() => openDetails(product, 'imperfect')}
                     onChoose={() => chooseProduct(product, 'imperfect')}
-                    chosen={chosenKey === `${product.id}-imperfect`}
+                    onSave={() => toggleSaved(product, 'imperfect')}
+                    chosen={chosenKeys.includes(`${product.id}-imperfect`)}
+                    saved={savedKeys.includes(`${product.id}-imperfect`)}
                   />
                 </div>
               </section>
@@ -659,7 +719,12 @@ export default function Home() {
           </div>
         ) : (
           <div className="grid gap-5 md:grid-cols-3">
-            {products.map((product) => (
+            {(showSavedOnly
+              ? products.filter((product) =>
+                  savedKeys.includes(`${product.id}-imperfect`),
+                )
+              : products
+            ).map((product) => (
               <ProductCard
                 key={product.id}
                 product={product}
@@ -667,7 +732,9 @@ export default function Home() {
                 kind="imperfect"
                 onDetails={() => openDetails(product, 'imperfect')}
                 onChoose={() => chooseProduct(product, 'imperfect')}
-                chosen={chosenKey === `${product.id}-imperfect`}
+                onSave={() => toggleSaved(product, 'imperfect')}
+                chosen={chosenKeys.includes(`${product.id}-imperfect`)}
+                saved={savedKeys.includes(`${product.id}-imperfect`)}
               />
             ))}
           </div>
@@ -693,7 +760,7 @@ export default function Home() {
             </div>
             <Button
               onClick={markTaskComplete}
-              disabled={!chosenKey}
+              disabled={chosenKeys.length === 0}
               className="h-11 shrink-0 rounded-xl bg-[#173f2d] px-5 font-bold"
             >
               <CheckCircle2 aria-hidden="true" /> Mark task complete
@@ -790,7 +857,16 @@ export default function Home() {
               }
               className="h-11 rounded-xl bg-[#1b7f3a] px-5 font-bold"
             >
-              <ShoppingCart aria-hidden="true" /> Choose this product
+              {selected &&
+              chosenKeys.includes(`${selected.product.id}-${selected.kind}`) ? (
+                <Check aria-hidden="true" />
+              ) : (
+                <ShoppingCart aria-hidden="true" />
+              )}
+              {selected &&
+              chosenKeys.includes(`${selected.product.id}-${selected.kind}`)
+                ? 'Remove selection'
+                : 'Choose this product'}
             </Button>
           </DialogFooter>
         </DialogContent>
