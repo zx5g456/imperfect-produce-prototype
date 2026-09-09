@@ -24,6 +24,9 @@ export type EventType =
   | 'product_chosen'
   | 'task_completed';
 
+const PRODUCTION_API_BASE_URL =
+  'https://fresh-choice-research-api.zx5g456.workers.dev';
+
 function apiBaseUrl() {
   const configured = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, '');
   if (configured) return configured;
@@ -36,7 +39,7 @@ function apiBaseUrl() {
     return 'http://127.0.0.1:8787';
   }
 
-  return '';
+  return PRODUCTION_API_BASE_URL;
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {

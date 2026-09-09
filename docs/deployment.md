@@ -35,14 +35,15 @@ Verify the resulting Worker URL with `/health` before publishing the frontend.
 
 ## 3. Build and deploy the Next.js frontend
 
-Build with the deployed API URL embedded in the client bundle, then deploy the static-assets Worker:
+Build the client bundle, then deploy the static-assets Worker:
 
 ```bash
-NEXT_PUBLIC_API_BASE_URL=https://fresh-choice-research-api.zx5g456.workers.dev \
 NEXT_PUBLIC_SITE_URL=https://fresh-choice-imperfect-produce.zx5g456.workers.dev \
 npm run build
 npm run web:deploy
 ```
+
+The current production API URL is the frontend default. Set `NEXT_PUBLIC_API_BASE_URL` only when building for a different API environment.
 
 Set `NEXT_PUBLIC_SITE_URL` to the final Worker or custom-domain URL before the production build when correct social-sharing metadata is required.
 
