@@ -1,4 +1,22 @@
 [
+    {
+    "id": "templeton-test111",
+    "position": 1,
+    "category": "Fresh produce",
+    "standardName": "Test carrots",
+    "imperfectName": "Test Naturally wonky carrots",
+    "standardImage": "/products/standard-carrot.jpg",
+    "imperfectImage": "/products/imperfect-carrot.jpg",
+    "unit": "1 kg bag",
+    "originalPriceCents": 390,
+    "currentPriceCents": 250,
+    "appearance": "Forked or curved from growing around stones in the soil.",
+    "quality": "Fresh eating quality — shape only, no damage.",
+    "conditionAInformation": "Australian-grown carrots packed in a 1 kg bag. Suitable for soups, roasting, salads and everyday cooking. Keep refrigerated in the crisper drawer.",
+    "conditionBInformation": "A 1 kg value bag of Australian-grown carrots selected for fresh eating quality. Natural curves or forks do not affect flavour or cooking use. Keep refrigerated in the crisper drawer.",
+    "scenario": "You are buying carrots for a soup tonight. Find the current price and decide whether you need more information.",
+    "sourceStatus": "not verified"
+  },
   {
     "id": "carrots",
     "position": 1,
