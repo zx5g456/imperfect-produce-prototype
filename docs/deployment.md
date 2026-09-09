@@ -63,6 +63,7 @@ SELECT
   e.product_id,
   e.product_kind,
   e.elapsed_ms,
+  e.metadata_json,
   e.occurred_at
 FROM study_sessions AS s
 LEFT JOIN behavior_events AS e ON e.session_id = s.id

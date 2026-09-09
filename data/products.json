@@ -11,6 +11,8 @@
     "currentPriceCents": 250,
     "appearance": "Forked or curved from growing around stones in the soil.",
     "quality": "Fresh eating quality — shape only, no damage.",
+    "conditionAInformation": "Australian-grown carrots packed in a 1 kg bag. Suitable for soups, roasting, salads and everyday cooking. Keep refrigerated in the crisper drawer.",
+    "conditionBInformation": "A 1 kg value bag of Australian-grown carrots selected for fresh eating quality. Natural curves or forks do not affect flavour or cooking use. Keep refrigerated in the crisper drawer.",
     "scenario": "You are buying carrots for a soup tonight. Find the current price and decide whether you need more information.",
     "sourceStatus": "not verified"
   },
@@ -26,6 +28,8 @@
     "currentPriceCents": 380,
     "appearance": "Uneven colour or shape from natural growing conditions.",
     "quality": "Crisp and ready to eat — appearance only.",
+    "conditionAInformation": "A 1 kg bag of red apples for snacking, lunchboxes or baking. Rinse before eating and store refrigerated to help maintain crispness.",
+    "conditionBInformation": "A 1 kg value bag of crisp red apples with naturally varied colour or shape. The visual variation does not change their suitability for snacking, lunchboxes or baking.",
     "scenario": "You are choosing apples for weekday snacks. Find the price, saving and quality status before deciding.",
     "sourceStatus": "not verified"
   },
@@ -41,6 +45,8 @@
     "currentPriceCents": 420,
     "appearance": "Curved or uneven shape that does not affect taste.",
     "quality": "Fresh cooking quality — checked by our produce team.",
+    "conditionAInformation": "A 500 g pack of red capsicums suitable for salads, roasting, stir-fries and sauces. Store refrigerated and wash before use.",
+    "conditionBInformation": "A 500 g value pack of red capsicums checked for fresh cooking quality. Their naturally curved or uneven shape does not affect flavour or use in salads, roasting, stir-fries and sauces.",
     "scenario": "You need capsicums for dinner and are comparing value. Identify what looks different and what the price covers.",
     "sourceStatus": "not verified"
   }

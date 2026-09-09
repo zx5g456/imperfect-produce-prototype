@@ -58,6 +58,7 @@ Use GitHub Issues for tasks, one feature branch per issue, and Pull Requests for
 - `data/products.json` — offline frontend fallback used if the API is unavailable
 - `scripts/verify-product-data.mjs` — product-data consistency check
 - `docs/evaluation-mapping.md` — mapping from evaluation questions to prototype evidence
+- `docs/database-and-products.md` — viewing research records and adding products safely
 - `docs/deployment.md` — Cloudflare Workers and D1 deployment guide
 
 ## Image credits

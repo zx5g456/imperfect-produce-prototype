@@ -10,6 +10,8 @@ export type Product = {
   currentPriceCents: number;
   appearance: string;
   quality: string;
+  conditionAInformation: string;
+  conditionBInformation: string;
   scenario: string;
   sourceStatus: 'not verified' | 'verified';
 };

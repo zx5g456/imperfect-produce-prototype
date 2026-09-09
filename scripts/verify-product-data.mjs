@@ -10,6 +10,8 @@ for (const product of products) {
     'unit',
     'appearance',
     'quality',
+    'conditionAInformation',
+    'conditionBInformation',
     'scenario',
     'sourceStatus',
   ];

@@ -22,6 +22,13 @@ def test_products_and_anonymous_session_flow(tmp_path: Path, monkeypatch) -> Non
             "apples",
             "capsicum",
         ]
+        first_product = products.json()["products"][0]
+        assert first_product["conditionAInformation"]
+        assert first_product["conditionBInformation"]
+        assert (
+            first_product["conditionAInformation"]
+            != first_product["conditionBInformation"]
+        )
 
         created = client.post(
             "/api/sessions",

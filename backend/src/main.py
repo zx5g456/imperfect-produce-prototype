@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field, field_validator
 
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
-MIGRATION_PATH = BACKEND_DIR / "migrations" / "0001_initial.sql"
+MIGRATIONS_DIR = BACKEND_DIR / "migrations"
 DEFAULT_DATABASE_PATH = BACKEND_DIR / ".data" / "prototype.sqlite3"
 
 StudyMode = Literal["browse", "comprehension", "comparison"]
@@ -97,6 +97,8 @@ SELECT
   current_price_cents,
   appearance,
   quality,
+  condition_a_information,
+  condition_b_information,
   scenario,
   source_status
 FROM products
@@ -117,6 +119,8 @@ def product_to_api(row: dict[str, Any]) -> dict[str, Any]:
         "currentPriceCents": row["current_price_cents"],
         "appearance": row["appearance"],
         "quality": row["quality"],
+        "conditionAInformation": row["condition_a_information"],
+        "conditionBInformation": row["condition_b_information"],
         "scenario": row["scenario"],
         "sourceStatus": row["source_status"],
     }
@@ -132,7 +136,30 @@ class LocalSQLiteRepository:
         if database_path not in self._initialized_paths:
             database_path.parent.mkdir(parents=True, exist_ok=True)
             with self.connect() as connection:
-                connection.executescript(MIGRATION_PATH.read_text(encoding="utf-8"))
+                connection.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS local_schema_migrations (
+                      name TEXT PRIMARY KEY,
+                      applied_at TEXT NOT NULL
+                    )
+                    """
+                )
+                applied = {
+                    row[0]
+                    for row in connection.execute(
+                        "SELECT name FROM local_schema_migrations"
+                    ).fetchall()
+                }
+                for migration_path in sorted(MIGRATIONS_DIR.glob("*.sql")):
+                    if migration_path.name in applied:
+                        continue
+                    connection.executescript(
+                        migration_path.read_text(encoding="utf-8")
+                    )
+                    connection.execute(
+                        "INSERT INTO local_schema_migrations (name, applied_at) VALUES (?, ?)",
+                        (migration_path.name, utc_now()),
+                    )
             self._initialized_paths.add(database_path)
 
     def connect(self) -> sqlite3.Connection:

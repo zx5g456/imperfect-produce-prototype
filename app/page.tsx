@@ -56,6 +56,10 @@ function savingsPercent(product: Product) {
   return Math.round((savings(product) / product.originalPriceCents) * 100);
 }
 
+function productStateKey(productId: string, kind: ProductKind) {
+  return `${productId}::${kind}`;
+}
+
 function ProductCard({
   product,
   condition,
@@ -252,7 +256,26 @@ function ProductDetail({
           )}
         </div>
 
-        {enhanced ? (
+        <div className="mt-6 rounded-2xl border border-[#dfe7e1] bg-white p-4 shadow-sm">
+          <div className="flex gap-3">
+            <Info
+              className="mt-0.5 size-5 shrink-0 text-[#356b4a]"
+              aria-hidden="true"
+            />
+            <div>
+              <h3 className="font-extrabold text-[#183f2c]">
+                Product information
+              </h3>
+              <p className="mt-1 text-sm leading-6 text-[#52645a]">
+                {condition === 'A'
+                  ? product.conditionAInformation
+                  : product.conditionBInformation}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {enhanced && (
           <div className="mt-6 space-y-3">
             <div className="rounded-2xl border border-[#d6eadb] bg-[#f0f8f1] p-4">
               <div className="flex gap-3">
@@ -307,11 +330,6 @@ function ProductDetail({
                 </strong>
               </div>
             </div>
-          </div>
-        ) : (
-          <div className="mt-6 rounded-2xl border border-[#e2e8e3] bg-[#fafbf9] p-4 text-sm leading-6 text-[#52645a]">
-            This basic product label shows the product name, pack quantity and
-            current selling price.
           </div>
         )}
       </div>
@@ -416,7 +434,7 @@ export default function Home() {
   }
 
   function chooseProduct(product: Product, kind: ProductKind) {
-    const key = `${product.id}-${kind}`;
+    const key = productStateKey(product.id, kind);
     const alreadyChosen = chosenKeys.includes(key);
     const nextChosenKeys = alreadyChosen
       ? chosenKeys.filter((chosenKey) => chosenKey !== key)
@@ -441,7 +459,7 @@ export default function Home() {
   }
 
   function toggleSaved(product: Product, kind: ProductKind) {
-    const key = `${product.id}-${kind}`;
+    const key = productStateKey(product.id, kind);
     const nextSavedKeys = savedKeys.includes(key)
       ? savedKeys.filter((savedKey) => savedKey !== key)
       : [...savedKeys, key];
@@ -480,7 +498,7 @@ export default function Home() {
     if (!sessionId || !startedAt) return;
 
     const [productId, productKind] =
-      chosenKeys.length === 1 ? chosenKeys[0].split('-') : [];
+      chosenKeys.length === 1 ? chosenKeys[0].split('::') : [];
     void completeStudySession(sessionId, {
       elapsedMs: Date.now() - startedAt,
       productId,
@@ -700,8 +718,12 @@ export default function Home() {
                     onDetails={() => openDetails(product, 'standard')}
                     onChoose={() => chooseProduct(product, 'standard')}
                     onSave={() => toggleSaved(product, 'standard')}
-                    chosen={chosenKeys.includes(`${product.id}-standard`)}
-                    saved={savedKeys.includes(`${product.id}-standard`)}
+                    chosen={chosenKeys.includes(
+                      productStateKey(product.id, 'standard'),
+                    )}
+                    saved={savedKeys.includes(
+                      productStateKey(product.id, 'standard'),
+                    )}
                   />
                   <ProductCard
                     product={product}
@@ -710,8 +732,12 @@ export default function Home() {
                     onDetails={() => openDetails(product, 'imperfect')}
                     onChoose={() => chooseProduct(product, 'imperfect')}
                     onSave={() => toggleSaved(product, 'imperfect')}
-                    chosen={chosenKeys.includes(`${product.id}-imperfect`)}
-                    saved={savedKeys.includes(`${product.id}-imperfect`)}
+                    chosen={chosenKeys.includes(
+                      productStateKey(product.id, 'imperfect'),
+                    )}
+                    saved={savedKeys.includes(
+                      productStateKey(product.id, 'imperfect'),
+                    )}
                   />
                 </div>
               </section>
@@ -721,7 +747,7 @@ export default function Home() {
           <div className="grid gap-5 md:grid-cols-3">
             {(showSavedOnly
               ? products.filter((product) =>
-                  savedKeys.includes(`${product.id}-imperfect`),
+                  savedKeys.includes(productStateKey(product.id, 'imperfect')),
                 )
               : products
             ).map((product) => (
@@ -733,8 +759,12 @@ export default function Home() {
                 onDetails={() => openDetails(product, 'imperfect')}
                 onChoose={() => chooseProduct(product, 'imperfect')}
                 onSave={() => toggleSaved(product, 'imperfect')}
-                chosen={chosenKeys.includes(`${product.id}-imperfect`)}
-                saved={savedKeys.includes(`${product.id}-imperfect`)}
+                chosen={chosenKeys.includes(
+                  productStateKey(product.id, 'imperfect'),
+                )}
+                saved={savedKeys.includes(
+                  productStateKey(product.id, 'imperfect'),
+                )}
               />
             ))}
           </div>
@@ -858,13 +888,17 @@ export default function Home() {
               className="h-11 rounded-xl bg-[#1b7f3a] px-5 font-bold"
             >
               {selected &&
-              chosenKeys.includes(`${selected.product.id}-${selected.kind}`) ? (
+              chosenKeys.includes(
+                productStateKey(selected.product.id, selected.kind),
+              ) ? (
                 <Check aria-hidden="true" />
               ) : (
                 <ShoppingCart aria-hidden="true" />
               )}
               {selected &&
-              chosenKeys.includes(`${selected.product.id}-${selected.kind}`)
+              chosenKeys.includes(
+                productStateKey(selected.product.id, selected.kind),
+              )
                 ? 'Remove selection'
                 : 'Choose this product'}
             </Button>
