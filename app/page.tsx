@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   BadgeDollarSign,
   Check,
@@ -107,7 +107,7 @@ function ProductCard({
         />
         {enhanced ? (
           <span className="absolute left-4 top-4 rounded-full bg-[#fff2a8] px-3 py-1.5 text-xs font-extrabold text-[#493e00] shadow-sm">
-            Perfectly imperfect
+            Fresh value pick
           </span>
         ) : kind === 'standard' ? (
           <span className="absolute left-4 top-4 rounded-full bg-white/95 px-3 py-1.5 text-xs font-bold text-[#385848] shadow-sm">
@@ -325,7 +325,6 @@ export default function Home() {
   >('loading');
   const [condition, setCondition] = useState<Condition>('B');
   const [studyMode, setStudyMode] = useState<StudyMode>('browse');
-  const [scenarioIndex, setScenarioIndex] = useState(0);
   const [selected, setSelected] = useState<{
     product: Product;
     kind: 'standard' | 'imperfect';
@@ -339,17 +338,12 @@ export default function Home() {
   const [startingSession, setStartingSession] = useState(false);
   const [recordingError, setRecordingError] = useState(false);
 
-  const activeProduct = products[scenarioIndex] ?? products[0]!;
-
   useEffect(() => {
     const controller = new AbortController();
     loadProducts(controller.signal)
       .then((databaseProducts) => {
         if (databaseProducts.length > 0) {
           setProducts(databaseProducts);
-          setScenarioIndex((current) =>
-            Math.min(current, databaseProducts.length - 1),
-          );
           setDataSource('database');
         } else {
           setDataSource('fallback');
@@ -364,7 +358,6 @@ export default function Home() {
     const params = new URLSearchParams(window.location.search);
     const urlCondition = params.get('condition');
     const urlMode = params.get('mode');
-    const urlScenario = Number(params.get('scenario'));
 
     if (urlCondition === 'A' || urlCondition === 'B')
       setCondition(urlCondition);
@@ -374,38 +367,23 @@ export default function Home() {
       urlMode === 'comparison'
     )
       setStudyMode(urlMode);
-    if (
-      Number.isInteger(urlScenario) &&
-      urlScenario >= 1 &&
-      urlScenario <= initialProducts.length
-    )
-      setScenarioIndex(urlScenario - 1);
   }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     params.set('mode', studyMode);
     params.set('condition', condition);
-    params.set('scenario', String(scenarioIndex + 1));
+    params.delete('scenario');
     window.history.replaceState(
       {},
       '',
       `${window.location.pathname}?${params.toString()}`,
     );
-  }, [condition, scenarioIndex, studyMode]);
+  }, [condition, studyMode]);
 
-  const visibleProducts = useMemo(() => {
-    return studyMode === 'browse' ? products : [activeProduct];
-  }, [activeProduct, products, studyMode]);
-
-  function resetSession(next?: {
-    mode?: StudyMode;
-    condition?: Condition;
-    scenario?: number;
-  }) {
+  function resetSession(next?: { mode?: StudyMode; condition?: Condition }) {
     if (next?.mode) setStudyMode(next.mode);
     if (next?.condition) setCondition(next.condition);
-    if (typeof next?.scenario === 'number') setScenarioIndex(next.scenario);
     setSelected(null);
     setChosenKey(null);
     setCompleted(false);
@@ -429,7 +407,7 @@ export default function Home() {
       productId: product.id,
       productKind: kind,
       elapsedMs: elapsedMs(),
-      metadata: { condition, studyMode, scenario: scenarioIndex + 1 },
+      metadata: { condition, studyMode, displayScope: 'all-products' },
     }).catch(() => setRecordingError(true));
   }
 
@@ -454,7 +432,7 @@ export default function Home() {
       const session = await createStudySession({
         studyMode,
         condition,
-        scenarioIndex: scenarioIndex + 1,
+        scenarioIndex: 1,
       });
       setSessionId(session.id);
       setDataSource('database');
@@ -580,14 +558,16 @@ export default function Home() {
               <div>
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="text-xs font-black uppercase tracking-[0.12em] text-[#176c36]">
-                    Research task {scenarioIndex + 1} of {products.length}
+                    All-product research task
                   </p>
                   <span className="rounded-full bg-[#123f2b] px-2.5 py-1 text-[10px] font-bold text-white">
                     Condition {condition}
                   </span>
                 </div>
                 <p className="mt-1 max-w-3xl text-sm font-semibold leading-6 text-[#294a38]">
-                  {activeProduct.scenario}
+                  {studyMode === 'comparison'
+                    ? 'Compare the standard and value options across the full range, then choose the product you would buy.'
+                    : 'Review every product label, then choose the option that best suits your needs.'}
                 </p>
               </div>
             </div>
@@ -606,18 +586,19 @@ export default function Home() {
           <div className="mx-auto flex max-w-7xl flex-col justify-between gap-4 px-4 py-7 md:flex-row md:items-center md:px-8">
             <div>
               <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#6a5a00]">
-                Perfectly imperfect
+                Fresh choices for everyone
               </p>
               <h1 className="mt-1 text-3xl font-black tracking-[-0.04em] text-[#164c2f] md:text-4xl">
-                Same fresh quality. A little less perfect.
+                There&apos;s something fresh for everyone.
               </h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-[#405c4d] md:text-base">
-                These fruit and vegetables look different, but they are checked
-                for freshness and cost less.
+                Choose the fruit and vegetables that suit your needs,
+                preferences and budget, with clear quality and price
+                information.
               </p>
             </div>
             <div className="shrink-0 rounded-2xl bg-white/70 px-5 py-3 text-sm font-semibold text-[#315642] shadow-sm ring-1 ring-black/5">
-              Save money · help reduce food waste
+              More choice · clearer value
             </div>
           </div>
         </section>
@@ -632,10 +613,10 @@ export default function Home() {
             <p className="text-sm font-bold text-[#17733a]">Fruit &amp; veg</p>
             <h1 className="mt-1 text-2xl font-extrabold tracking-[-0.03em] md:text-3xl">
               {studyMode === 'comparison'
-                ? 'Choose between these products'
+                ? 'Compare the full range'
                 : studyMode === 'comprehension'
-                  ? 'Product label task'
-                  : 'Imperfect picks'}
+                  ? 'Review all product labels'
+                  : 'Fresh value picks'}
             </h1>
           </div>
           {studyMode === 'browse' ? (
@@ -653,29 +634,42 @@ export default function Home() {
         </div>
 
         {studyMode === 'comparison' ? (
-          <div className="mx-auto grid max-w-4xl gap-5 md:grid-cols-2">
-            <ProductCard
-              product={activeProduct}
-              condition={condition}
-              kind="standard"
-              onDetails={() => openDetails(activeProduct, 'standard')}
-              onChoose={() => chooseProduct(activeProduct, 'standard')}
-              chosen={chosenKey === `${activeProduct.id}-standard`}
-            />
-            <ProductCard
-              product={activeProduct}
-              condition={condition}
-              kind="imperfect"
-              onDetails={() => openDetails(activeProduct, 'imperfect')}
-              onChoose={() => chooseProduct(activeProduct, 'imperfect')}
-              chosen={chosenKey === `${activeProduct.id}-imperfect`}
-            />
+          <div className="space-y-8">
+            {products.map((product) => (
+              <section
+                key={product.id}
+                aria-labelledby={`${product.id}-comparison-heading`}
+              >
+                <h2
+                  id={`${product.id}-comparison-heading`}
+                  className="mb-3 text-lg font-extrabold text-[#294a38]"
+                >
+                  {product.standardName} · {product.unit}
+                </h2>
+                <div className="grid gap-5 md:grid-cols-2">
+                  <ProductCard
+                    product={product}
+                    condition={condition}
+                    kind="standard"
+                    onDetails={() => openDetails(product, 'standard')}
+                    onChoose={() => chooseProduct(product, 'standard')}
+                    chosen={chosenKey === `${product.id}-standard`}
+                  />
+                  <ProductCard
+                    product={product}
+                    condition={condition}
+                    kind="imperfect"
+                    onDetails={() => openDetails(product, 'imperfect')}
+                    onChoose={() => chooseProduct(product, 'imperfect')}
+                    chosen={chosenKey === `${product.id}-imperfect`}
+                  />
+                </div>
+              </section>
+            ))}
           </div>
         ) : (
-          <div
-            className={`grid gap-5 ${visibleProducts.length === 1 ? 'mx-auto max-w-sm' : 'md:grid-cols-3'}`}
-          >
-            {visibleProducts.map((product) => (
+          <div className="grid gap-5 md:grid-cols-3">
+            {products.map((product) => (
               <ProductCard
                 key={product.id}
                 product={product}
@@ -819,8 +813,8 @@ export default function Home() {
               Research session setup
             </DialogTitle>
             <DialogDescription>
-              Choose a stable task, scenario and label condition before handing
-              the screen to a participant.
+              Choose a stable task and label condition before handing the
+              all-product screen to a participant.
             </DialogDescription>
           </DialogHeader>
 
@@ -847,25 +841,7 @@ export default function Home() {
 
             <fieldset>
               <legend className="text-sm font-extrabold text-[#294a38]">
-                2. Product scenario
-              </legend>
-              <div className="mt-3 grid grid-cols-3 gap-2">
-                {products.map((product, index) => (
-                  <button
-                    key={product.id}
-                    onClick={() => resetSession({ scenario: index })}
-                    className={`rounded-xl border px-3 py-3 text-sm font-bold transition ${scenarioIndex === index ? 'border-[#1b7f3a] bg-[#edf7ef] text-[#135c2f]' : 'border-[#dce3dd] bg-white text-[#52645a]'}`}
-                  >
-                    {index + 1}.{' '}
-                    {product.id[0].toUpperCase() + product.id.slice(1)}
-                  </button>
-                ))}
-              </div>
-            </fieldset>
-
-            <fieldset>
-              <legend className="text-sm font-extrabold text-[#294a38]">
-                3. Label condition
+                2. Label condition
               </legend>
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
                 <button
@@ -964,13 +940,12 @@ export default function Home() {
           <DialogFooter className="mt-2 rounded-b-3xl">
             <Button
               onClick={() => {
-                const next = (scenarioIndex + 1) % products.length;
-                resetSession({ scenario: next });
+                resetSession();
                 setCompleted(false);
               }}
               className="h-11 rounded-xl bg-[#1b7f3a] px-5 font-bold"
             >
-              Continue to scenario {((scenarioIndex + 1) % products.length) + 1}
+              Start another session
             </Button>
           </DialogFooter>
         </DialogContent>

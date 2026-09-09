@@ -24,7 +24,7 @@ The **Research setup** control in the top bar creates a stable, shareable sessio
 - label-comprehension tasks for Evaluation Question 1.1; and
 - controlled Condition A / Condition B comparisons for Evaluation Question 2.2.
 
-Condition A displays basic product information. Condition B adds the explanation of appearance, quality status, original price and explicit saving. Product, image, quantity and current price remain the same across conditions.
+Every flow displays the full product range, so the facilitator does not need to choose an individual product scenario. Condition A displays basic product information. Condition B adds the explanation of appearance, quality status, original price and explicit saving. Product, image, quantity and current price remain the same across conditions.
 
 ## Before formal testing
 
