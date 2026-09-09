@@ -98,10 +98,8 @@ PRODUCT_SELECT = """
 SELECT
   id,
   category,
-  standard_name,
-  imperfect_name,
-  standard_image,
-  imperfect_image,
+  name,
+  image,
   unit,
   original_price_cents,
   current_price_cents,
@@ -117,13 +115,16 @@ ORDER BY position ASC
 
 
 def product_to_api(row: dict[str, Any]) -> dict[str, Any]:
+    raw_category = row["category"]
+    kind: ProductKind = (
+        "standard" if raw_category.startswith("s-") else "imperfect"
+    )
     return {
         "id": row["id"],
-        "category": row["category"],
-        "standardName": row["standard_name"],
-        "imperfectName": row["imperfect_name"],
-        "standardImage": row["standard_image"],
-        "imperfectImage": row["imperfect_image"],
+        "category": raw_category[2:],
+        "kind": kind,
+        "name": row["name"],
+        "image": row["image"],
         "unit": row["unit"],
         "originalPriceCents": row["original_price_cents"],
         "currentPriceCents": row["current_price_cents"],
@@ -149,23 +150,29 @@ def sync_local_product_catalog(connection: sqlite3.Connection) -> None:
     connection.execute("UPDATE products SET position = position + 1000000000")
 
     for product in products:
+        is_standard = product["category"].startswith("s-")
+        name = (
+            product["standardName"]
+            if is_standard
+            else product["imperfectName"]
+        )
+        image = (
+            product["standardImage"] if is_standard else product["imperfectImage"]
+        )
         connection.execute(
             """
             INSERT INTO products (
-              id, position, category, standard_name, imperfect_name,
-              standard_image, imperfect_image, unit,
+              id, position, category, name, image, unit,
               original_price_cents, current_price_cents,
               appearance, quality,
               condition_a_information, condition_b_information,
               scenario, source_status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
               position = excluded.position,
               category = excluded.category,
-              standard_name = excluded.standard_name,
-              imperfect_name = excluded.imperfect_name,
-              standard_image = excluded.standard_image,
-              imperfect_image = excluded.imperfect_image,
+              name = excluded.name,
+              image = excluded.image,
               unit = excluded.unit,
               original_price_cents = excluded.original_price_cents,
               current_price_cents = excluded.current_price_cents,
@@ -180,10 +187,8 @@ def sync_local_product_catalog(connection: sqlite3.Connection) -> None:
                 product["id"],
                 product["position"],
                 product["category"],
-                product["standardName"],
-                product["imperfectName"],
-                product["standardImage"],
-                product["imperfectImage"],
+                name,
+                image,
                 product["unit"],
                 product["originalPriceCents"],
                 product["currentPriceCents"],

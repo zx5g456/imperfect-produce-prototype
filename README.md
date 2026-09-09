@@ -18,7 +18,9 @@ This is a university research prototype. It is not affiliated with Woolworths an
 
 ## Prototype flows
 
-The start screen requires a participant name and Condition A or B before it creates a database session and opens the shopping demo. Every session displays the full product range. Condition A displays basic product information. Condition B adds the explanation of appearance, quality status, original price and explicit saving. Product, image, quantity and current price remain the same across conditions.
+The start screen requires a participant name and Condition A or B before it creates a database session and opens the shopping demo. Every session displays the full standard and imperfect product range. Condition A displays basic product information. Condition B adds the explanation of appearance, quality status, original price and explicit saving for imperfect products. The products shown remain the same across conditions.
+
+Each object in `data/products.json` represents exactly one visible product card. A category beginning with `s-` uses `standardName` and `standardImage`; a category beginning with `i-` uses `imperfectName` and `imperfectImage`. The prefix controls the product type but is hidden from shoppers.
 
 ## Before formal testing
 
@@ -90,7 +92,7 @@ npm run web:deploy
 - `app/page.tsx` — participant start screen, shopping demo and session-linked event capture
 - `lib/research-api.ts` — typed connection between the Next.js frontend and Python API
 - `backend/src/main.py` — FastAPI routes plus local SQLite and D1 adapters
-- `backend/migrations/0001_initial.sql` — production D1/local SQLite schema and initial products
+- `backend/migrations/` — versioned production D1/local SQLite schema changes
 - `data/products.json` — product source synchronised to local SQLite, production D1 and the offline frontend fallback
 - `scripts/verify-product-data.mjs` — product-data consistency check
 - `.github/workflows/ci.yml` — verification and automatic `main` deployment

@@ -6,10 +6,6 @@ for (const product of products) {
   const requiredText = [
     'id',
     'category',
-    'standardName',
-    'imperfectName',
-    'standardImage',
-    'imperfectImage',
     'unit',
     'appearance',
     'quality',
@@ -22,6 +18,39 @@ for (const product of products) {
   for (const field of requiredText) {
     if (!product[field] || typeof product[field] !== 'string') {
       errors.push(`${product.id || 'unknown'}: ${field} is missing`);
+    }
+  }
+
+  const kind = product.category?.startsWith('s-')
+    ? 'standard'
+    : product.category?.startsWith('i-')
+      ? 'imperfect'
+      : null;
+
+  if (!kind || product.category.length <= 2) {
+    errors.push(`${product.id}: category must start with s- or i-`);
+  } else {
+    const prefix = kind === 'standard' ? 's-' : 'i-';
+    const nameField = kind === 'standard' ? 'standardName' : 'imperfectName';
+    const imageField = kind === 'standard' ? 'standardImage' : 'imperfectImage';
+    const unusedNameField =
+      kind === 'standard' ? 'imperfectName' : 'standardName';
+    const unusedImageField =
+      kind === 'standard' ? 'imperfectImage' : 'standardImage';
+
+    if (!product.id?.startsWith(prefix)) {
+      errors.push(`${product.id}: ID must start with ${prefix}`);
+    }
+    if (!product[nameField] || typeof product[nameField] !== 'string') {
+      errors.push(`${product.id}: ${nameField} is missing`);
+    }
+    if (!product[imageField] || typeof product[imageField] !== 'string') {
+      errors.push(`${product.id}: ${imageField} is missing`);
+    }
+    if (unusedNameField in product || unusedImageField in product) {
+      errors.push(
+        `${product.id}: only the ${kind} name and image fields are allowed`,
+      );
     }
   }
 
@@ -73,5 +102,5 @@ if (errors.length) {
 }
 
 console.log(
-  `Verified ${products.length} prototype products: required fields, integer prices and savings calculations are valid.`,
+  `Verified ${products.length} one-card product records: category prefixes, required fields, integer prices and savings calculations are valid.`,
 );

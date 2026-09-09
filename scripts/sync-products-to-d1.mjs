@@ -25,14 +25,13 @@ function sqlText(value) {
 }
 
 const valueRows = products.map((product) => {
+  const isStandard = product.category.startsWith('s-');
   const values = [
     product.id,
     product.position,
     product.category,
-    product.standardName,
-    product.imperfectName,
-    product.standardImage,
-    product.imperfectImage,
+    isStandard ? product.standardName : product.imperfectName,
+    isStandard ? product.standardImage : product.imperfectImage,
     product.unit,
     product.originalPriceCents,
     product.currentPriceCents,
@@ -61,8 +60,7 @@ DELETE FROM products WHERE id NOT IN (${productIds});
 UPDATE products SET position = position + 1000000000;
 
 INSERT INTO products (
-  id, position, category, standard_name, imperfect_name,
-  standard_image, imperfect_image, unit,
+  id, position, category, name, image, unit,
   original_price_cents, current_price_cents,
   appearance, quality,
   condition_a_information, condition_b_information,
@@ -72,10 +70,8 @@ INSERT INTO products (
 ON CONFLICT(id) DO UPDATE SET
   position = excluded.position,
   category = excluded.category,
-  standard_name = excluded.standard_name,
-  imperfect_name = excluded.imperfect_name,
-  standard_image = excluded.standard_image,
-  imperfect_image = excluded.imperfect_image,
+  name = excluded.name,
+  image = excluded.image,
   unit = excluded.unit,
   original_price_cents = excluded.original_price_cents,
   current_price_cents = excluded.current_price_cents,

@@ -40,6 +40,13 @@ def test_products_and_participant_session_flow(
         # Product IDs should be unique.
         product_ids = [item["id"] for item in products]
         assert len(product_ids) == len(set(product_ids))
+        assert {item["kind"] for item in products} == {"standard", "imperfect"}
+        assert all(item["name"] for item in products)
+        assert all(item["image"] for item in products)
+        assert all(
+            not item["category"].startswith(("s-", "i-"))
+            for item in products
+        )
 
         # Use an actual product returned by the API,
         # instead of hard-coding "carrots".
@@ -75,7 +82,7 @@ def test_products_and_participant_session_flow(
             json={
                 "event_type": "product_chosen",
                 "product_id": product_id,
-                "product_kind": "imperfect",
+                "product_kind": first_product["kind"],
                 "elapsed_ms": 1200,
                 "metadata": {
                     "condition": "B",
@@ -91,7 +98,7 @@ def test_products_and_participant_session_flow(
             json={
                 "elapsed_ms": 2500,
                 "product_id": product_id,
-                "product_kind": "imperfect",
+                "product_kind": first_product["kind"],
             },
         )
 

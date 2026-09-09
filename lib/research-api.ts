@@ -1,10 +1,11 @@
+export type ProductKind = 'standard' | 'imperfect';
+
 export type Product = {
   id: string;
   category: string;
-  standardName: string;
-  imperfectName: string;
-  standardImage: string;
-  imperfectImage: string;
+  kind: ProductKind;
+  name: string;
+  image: string;
   unit: string;
   originalPriceCents: number;
   currentPriceCents: number;
@@ -16,9 +17,49 @@ export type Product = {
   sourceStatus: 'not verified' | 'verified';
 };
 
+export type ProductCatalogEntry = Omit<
+  Product,
+  'category' | 'kind' | 'name' | 'image'
+> & {
+  category: string;
+  standardName?: string;
+  standardImage?: string;
+  imperfectName?: string;
+  imperfectImage?: string;
+};
+
+export function productFromCatalog(entry: ProductCatalogEntry): Product {
+  const kind: ProductKind = entry.category.startsWith('s-')
+    ? 'standard'
+    : 'imperfect';
+  const name = kind === 'standard' ? entry.standardName : entry.imperfectName;
+  const image =
+    kind === 'standard' ? entry.standardImage : entry.imperfectImage;
+
+  if (!name || !image) {
+    throw new Error(`Product ${entry.id} does not match its category prefix`);
+  }
+
+  return {
+    id: entry.id,
+    category: entry.category.slice(2),
+    kind,
+    name,
+    image,
+    unit: entry.unit,
+    originalPriceCents: entry.originalPriceCents,
+    currentPriceCents: entry.currentPriceCents,
+    appearance: entry.appearance,
+    quality: entry.quality,
+    conditionAInformation: entry.conditionAInformation,
+    conditionBInformation: entry.conditionBInformation,
+    scenario: entry.scenario,
+    sourceStatus: entry.sourceStatus,
+  };
+}
+
 export type StudyMode = 'browse' | 'comprehension' | 'comparison';
 export type Condition = 'A' | 'B';
-export type ProductKind = 'standard' | 'imperfect';
 export type EventType =
   | 'product_details_opened'
   | 'product_chosen'

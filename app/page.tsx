@@ -31,14 +31,17 @@ import {
   completeStudySession,
   createStudySession,
   loadProducts,
+  productFromCatalog,
   recordEvent,
   type Condition,
   type Product,
-  type ProductKind,
+  type ProductCatalogEntry,
   type StudyMode,
 } from '@/lib/research-api';
 
-const initialProducts = fallbackProducts as Product[];
+const initialProducts = (fallbackProducts as ProductCatalogEntry[]).map(
+  productFromCatalog,
+);
 
 function money(cents: number) {
   return new Intl.NumberFormat('en-AU', {
@@ -55,14 +58,9 @@ function savingsPercent(product: Product) {
   return Math.round((savings(product) / product.originalPriceCents) * 100);
 }
 
-function productStateKey(productId: string, kind: ProductKind) {
-  return `${productId}::${kind}`;
-}
-
 function ProductCard({
   product,
   condition,
-  kind,
   onDetails,
   onChoose,
   onSave,
@@ -71,24 +69,17 @@ function ProductCard({
 }: {
   product: Product;
   condition: Condition;
-  kind: 'standard' | 'imperfect';
   onDetails: () => void;
   onChoose: () => void;
   onSave: () => void;
   chosen: boolean;
   saved: boolean;
 }) {
-  const enhanced = kind === 'imperfect' && condition === 'B';
+  const enhanced = product.kind === 'imperfect' && condition === 'B';
   const price =
-    kind === 'standard'
+    product.kind === 'standard'
       ? product.originalPriceCents
       : product.currentPriceCents;
-  const name =
-    kind === 'standard'
-      ? product.standardName
-      : enhanced
-        ? product.imperfectName
-        : product.standardName;
 
   return (
     <article
@@ -100,17 +91,15 @@ function ProductCard({
     >
       <div className="relative aspect-[4/3] overflow-hidden bg-[#f3f1e9]">
         <img
-          src={
-            kind === 'standard' ? product.standardImage : product.imperfectImage
-          }
-          alt={name}
+          src={product.image}
+          alt={product.name}
           className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.025]"
         />
         {enhanced ? (
           <span className="absolute left-4 top-4 rounded-full bg-[#fff2a8] px-3 py-1.5 text-xs font-extrabold text-[#493e00] shadow-sm">
             Fresh value pick
           </span>
-        ) : kind === 'standard' ? (
+        ) : product.kind === 'standard' ? (
           <span className="absolute left-4 top-4 rounded-full bg-white/95 px-3 py-1.5 text-xs font-bold text-[#385848] shadow-sm">
             Standard range
           </span>
@@ -119,7 +108,7 @@ function ProductCard({
           onClick={onSave}
           aria-pressed={saved}
           className={`absolute right-4 top-4 grid size-10 place-items-center rounded-full bg-white/95 shadow-sm transition hover:scale-105 ${saved ? 'text-[#c8432c] ring-2 ring-[#c8432c]/20' : 'text-[#315643]'}`}
-          aria-label={`${saved ? 'Remove' : 'Save'} ${name} ${saved ? 'from' : 'to'} saved products`}
+          aria-label={`${saved ? 'Remove' : 'Save'} ${product.name} ${saved ? 'from' : 'to'} saved products`}
         >
           <Heart className="size-4" fill={saved ? 'currentColor' : 'none'} />
         </button>
@@ -130,13 +119,13 @@ function ProductCard({
           {product.category}
         </p>
         <h3 className="mt-1 min-h-14 text-xl font-extrabold leading-7 tracking-[-0.02em]">
-          {name}
+          {product.name}
         </h3>
         <p className="mt-1 text-sm text-[#69776f]">{product.unit}</p>
 
         <div className="mt-5 flex min-h-12 items-end gap-3 border-b border-[#e7ebe7] pb-4">
           <span
-            className={`text-3xl font-black tracking-[-0.04em] ${kind === 'imperfect' ? 'text-[#c8432c]' : 'text-[#18322a]'}`}
+            className={`text-3xl font-black tracking-[-0.04em] ${product.kind === 'imperfect' ? 'text-[#c8432c]' : 'text-[#18322a]'}`}
           >
             {money(price)}
           </span>
@@ -164,7 +153,7 @@ function ProductCard({
         ) : (
           <div className="mt-4 min-h-[92px] rounded-2xl border border-[#e4e9e5] bg-[#fafbf9] p-4">
             <p className="text-sm font-semibold text-[#385848]">
-              {kind === 'standard'
+              {product.kind === 'standard'
                 ? 'Everyday fresh produce'
                 : 'Product information'}
             </p>
@@ -203,21 +192,13 @@ function ProductCard({
 function ProductDetail({
   product,
   condition,
-  kind,
 }: {
   product: Product;
   condition: Condition;
-  kind: 'standard' | 'imperfect';
 }) {
-  const enhanced = kind === 'imperfect' && condition === 'B';
-  const name =
-    kind === 'standard'
-      ? product.standardName
-      : enhanced
-        ? product.imperfectName
-        : product.standardName;
+  const enhanced = product.kind === 'imperfect' && condition === 'B';
   const price =
-    kind === 'standard'
+    product.kind === 'standard'
       ? product.originalPriceCents
       : product.currentPriceCents;
 
@@ -225,10 +206,8 @@ function ProductDetail({
     <div className="grid gap-6 md:grid-cols-[0.9fr_1.1fr]">
       <div className="overflow-hidden rounded-2xl bg-[#f5f2ea]">
         <img
-          src={
-            kind === 'standard' ? product.standardImage : product.imperfectImage
-          }
-          alt={name}
+          src={product.image}
+          alt={product.name}
           className="aspect-square h-full w-full object-cover"
         />
       </div>
@@ -238,13 +217,13 @@ function ProductDetail({
           {product.category}
         </p>
         <h2 className="mt-2 text-3xl font-black tracking-[-0.04em] text-[#18322a]">
-          {name}
+          {product.name}
         </h2>
         <p className="mt-2 text-sm text-[#68786f]">{product.unit}</p>
 
         <div className="mt-5 flex items-end gap-3">
           <span
-            className={`text-4xl font-black tracking-[-0.05em] ${kind === 'imperfect' ? 'text-[#c8432c]' : 'text-[#18322a]'}`}
+            className={`text-4xl font-black tracking-[-0.05em] ${product.kind === 'imperfect' ? 'text-[#c8432c]' : 'text-[#18322a]'}`}
           >
             {money(price)}
           </span>
@@ -349,10 +328,7 @@ export default function Home() {
   const [testStarted, setTestStarted] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
   const [studyMode] = useState<StudyMode>('browse');
-  const [selected, setSelected] = useState<{
-    product: Product;
-    kind: 'standard' | 'imperfect';
-  } | null>(null);
+  const [selected, setSelected] = useState<Product | null>(null);
   const [chosenKeys, setChosenKeys] = useState<string[]>([]);
   const [savedKeys, setSavedKeys] = useState<string[]>([]);
   const [showSavedOnly, setShowSavedOnly] = useState(false);
@@ -402,25 +378,24 @@ export default function Home() {
   function logInteraction(
     eventType: 'product_details_opened' | 'product_chosen',
     product: Product,
-    kind: ProductKind,
   ) {
     if (!sessionId) return;
     void recordEvent(sessionId, {
       eventType,
       productId: product.id,
-      productKind: kind,
+      productKind: product.kind,
       elapsedMs: elapsedMs(),
       metadata: { condition, studyMode, displayScope: 'all-products' },
     }).catch(() => setRecordingError(true));
   }
 
-  function openDetails(product: Product, kind: ProductKind) {
-    setSelected({ product, kind });
-    logInteraction('product_details_opened', product, kind);
+  function openDetails(product: Product) {
+    setSelected(product);
+    logInteraction('product_details_opened', product);
   }
 
-  function chooseProduct(product: Product, kind: ProductKind) {
-    const key = productStateKey(product.id, kind);
+  function chooseProduct(product: Product) {
+    const key = product.id;
     const alreadyChosen = chosenKeys.includes(key);
     const nextChosenKeys = alreadyChosen
       ? chosenKeys.filter((chosenKey) => chosenKey !== key)
@@ -431,7 +406,7 @@ export default function Home() {
       void recordEvent(sessionId, {
         eventType: 'product_chosen',
         productId: product.id,
-        productKind: kind,
+        productKind: product.kind,
         elapsedMs: elapsedMs(),
         metadata: {
           condition,
@@ -444,8 +419,8 @@ export default function Home() {
     }
   }
 
-  function toggleSaved(product: Product, kind: ProductKind) {
-    const key = productStateKey(product.id, kind);
+  function toggleSaved(product: Product) {
+    const key = product.id;
     const nextSavedKeys = savedKeys.includes(key)
       ? savedKeys.filter((savedKey) => savedKey !== key)
       : [...savedKeys, key];
@@ -498,15 +473,14 @@ export default function Home() {
     setCompleted(true);
     if (!sessionId || !startedAt) return;
 
-    const [productId, productKind] =
-      chosenKeys.length === 1 ? chosenKeys[0].split('::') : [];
+    const chosenProduct =
+      chosenKeys.length === 1
+        ? products.find((product) => product.id === chosenKeys[0])
+        : undefined;
     void completeStudySession(sessionId, {
       elapsedMs: Date.now() - startedAt,
-      productId,
-      productKind:
-        productKind === 'standard' || productKind === 'imperfect'
-          ? productKind
-          : undefined,
+      productId: chosenProduct?.id,
+      productKind: chosenProduct?.kind,
     }).catch(() => setRecordingError(true));
   }
 
@@ -825,78 +799,23 @@ export default function Home() {
           )}
         </div>
 
-        {studyMode === 'comparison' ? (
-          <div className="space-y-8">
-            {products.map((product) => (
-              <section
-                key={product.id}
-                aria-labelledby={`${product.id}-comparison-heading`}
-              >
-                <h2
-                  id={`${product.id}-comparison-heading`}
-                  className="mb-3 text-lg font-extrabold text-[#294a38]"
-                >
-                  {product.standardName} · {product.unit}
-                </h2>
-                <div className="grid gap-5 md:grid-cols-2">
-                  <ProductCard
-                    product={product}
-                    condition={condition}
-                    kind="standard"
-                    onDetails={() => openDetails(product, 'standard')}
-                    onChoose={() => chooseProduct(product, 'standard')}
-                    onSave={() => toggleSaved(product, 'standard')}
-                    chosen={chosenKeys.includes(
-                      productStateKey(product.id, 'standard'),
-                    )}
-                    saved={savedKeys.includes(
-                      productStateKey(product.id, 'standard'),
-                    )}
-                  />
-                  <ProductCard
-                    product={product}
-                    condition={condition}
-                    kind="imperfect"
-                    onDetails={() => openDetails(product, 'imperfect')}
-                    onChoose={() => chooseProduct(product, 'imperfect')}
-                    onSave={() => toggleSaved(product, 'imperfect')}
-                    chosen={chosenKeys.includes(
-                      productStateKey(product.id, 'imperfect'),
-                    )}
-                    saved={savedKeys.includes(
-                      productStateKey(product.id, 'imperfect'),
-                    )}
-                  />
-                </div>
-              </section>
-            ))}
-          </div>
-        ) : (
-          <div className="grid gap-5 md:grid-cols-3">
-            {(showSavedOnly
-              ? products.filter((product) =>
-                  savedKeys.includes(productStateKey(product.id, 'imperfect')),
-                )
-              : products
-            ).map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                condition={condition}
-                kind="imperfect"
-                onDetails={() => openDetails(product, 'imperfect')}
-                onChoose={() => chooseProduct(product, 'imperfect')}
-                onSave={() => toggleSaved(product, 'imperfect')}
-                chosen={chosenKeys.includes(
-                  productStateKey(product.id, 'imperfect'),
-                )}
-                saved={savedKeys.includes(
-                  productStateKey(product.id, 'imperfect'),
-                )}
-              />
-            ))}
-          </div>
-        )}
+        <div className="grid gap-5 md:grid-cols-3">
+          {(showSavedOnly
+            ? products.filter((product) => savedKeys.includes(product.id))
+            : products
+          ).map((product) => (
+            <ProductCard
+              key={product.id}
+              product={product}
+              condition={condition}
+              onDetails={() => openDetails(product)}
+              onChoose={() => chooseProduct(product)}
+              onSave={() => toggleSaved(product)}
+              chosen={chosenKeys.includes(product.id)}
+              saved={savedKeys.includes(product.id)}
+            />
+          ))}
+        </div>
 
         {studyMode !== 'browse' && (
           <div className="mx-auto mt-7 flex max-w-4xl flex-col items-center justify-between gap-4 rounded-2xl border border-[#dbe2dc] bg-white p-5 sm:flex-row">
@@ -1003,31 +922,19 @@ export default function Home() {
             </DialogDescription>
           </DialogHeader>
           {selected && (
-            <ProductDetail
-              product={selected.product}
-              condition={condition}
-              kind={selected.kind}
-            />
+            <ProductDetail product={selected} condition={condition} />
           )}
           <DialogFooter className="mt-2 rounded-b-3xl">
             <Button
-              onClick={() =>
-                selected && chooseProduct(selected.product, selected.kind)
-              }
+              onClick={() => selected && chooseProduct(selected)}
               className="h-11 rounded-xl bg-[#1b7f3a] px-5 font-bold"
             >
-              {selected &&
-              chosenKeys.includes(
-                productStateKey(selected.product.id, selected.kind),
-              ) ? (
+              {selected && chosenKeys.includes(selected.id) ? (
                 <Check aria-hidden="true" />
               ) : (
                 <ShoppingCart aria-hidden="true" />
               )}
-              {selected &&
-              chosenKeys.includes(
-                productStateKey(selected.product.id, selected.kind),
-              )
+              {selected && chosenKeys.includes(selected.id)
                 ? 'Remove selection'
                 : 'Choose this product'}
             </Button>
