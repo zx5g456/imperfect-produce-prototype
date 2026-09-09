@@ -14,7 +14,7 @@ This is a university research prototype. It is not affiliated with Woolworths an
 - **Frontend:** standard Next.js 16 App Router, exported and served with Cloudflare Workers Static Assets.
 - **Backend:** an independent Python FastAPI service.
 - **Database:** local SQLite during development and Cloudflare D1 in production.
-- **Source control:** GitHub Pull Requests, with automatic checks on every push and Pull Request.
+- **Source control:** GitHub Pull Requests, with automatic checks on every push and Pull Request and automatic production deployment after `main` passes all checks.
 
 ## Prototype flows
 
@@ -49,14 +49,51 @@ The data check ensures prices are stored in whole cents, required label fields e
 
 Use GitHub Issues for tasks, one feature branch per issue, and Pull Requests for review. Protect `main` so it cannot be changed directly. See `CONTRIBUTING.md` for the agreed branch and review rules.
 
+## Automatic production deployment
+
+Every push or merged Pull Request to `main` runs the complete verification job. If it succeeds, GitHub Actions performs one production deployment at a time in this order:
+
+1. Build the production frontend.
+2. Validate `data/products.json` and synchronise it to Cloudflare D1.
+3. Deploy the Python FastAPI Worker.
+4. Deploy the Next.js static frontend Worker.
+5. Check the live API and website.
+
+Database schema migrations are deliberately excluded. Review and apply a new migration manually before merging code that depends on it:
+
+```bash
+npx wrangler d1 migrations apply fresh-choice-research --remote --config backend/wrangler.jsonc
+```
+
+### One-time GitHub setup
+
+In **GitHub → Settings → Environments**, create an environment named `production` and restrict its deployment branch to `main`. Add these environment secrets:
+
+- `CLOUDFLARE_ACCOUNT_ID` — `cd9f5b4465626a8002de3aa9e00ae5bd`
+- `CLOUDFLARE_API_TOKEN` — a Cloudflare API token scoped to this account with Workers and D1 edit access
+
+Do not put the token in a file, commit, Pull Request, issue or Actions log. After adding the secrets, run **CI and deploy → Run workflow** on `main` once, or push a new commit to `main`.
+
+Do not also enable a separate Cloudflare Dashboard Git build for these Workers. It would create a second deployment path where the last deployment wins.
+
+For manual recovery from a trusted, clean `main` checkout:
+
+```bash
+npm run products:sync:remote
+npm run api:deploy
+NEXT_PUBLIC_SITE_URL=https://fresh-choice-imperfect-produce.zx5g456.workers.dev npm run build
+npm run web:deploy
+```
+
 ## Key files
 
 - `app/page.tsx` — participant start screen, shopping demo and session-linked event capture
 - `lib/research-api.ts` — typed connection between the Next.js frontend and Python API
 - `backend/src/main.py` — FastAPI routes plus local SQLite and D1 adapters
 - `backend/migrations/0001_initial.sql` — production D1/local SQLite schema and initial products
-- `data/products.json` — offline frontend fallback used if the API is unavailable
+- `data/products.json` — product source synchronised to local SQLite, production D1 and the offline frontend fallback
 - `scripts/verify-product-data.mjs` — product-data consistency check
+- `.github/workflows/ci.yml` — verification and automatic `main` deployment
 - `docs/evaluation-mapping.md` — mapping from evaluation questions to prototype evidence
 - `docs/database-and-products.md` — viewing research records and adding products safely
 - `docs/deployment.md` — Cloudflare Workers and D1 deployment guide

@@ -49,7 +49,15 @@ Set `NEXT_PUBLIC_SITE_URL` to the final Worker or custom-domain URL before the p
 
 These public environment variables are embedded at build time. Rebuild and redeploy whenever either URL changes.
 
-For automatic deployments later, connect the GitHub repository under **Workers & Pages → Builds**. Keep the API and frontend as separate Workers so each can be deployed independently.
+## Automatic deployment from GitHub
+
+The repository workflow `.github/workflows/ci.yml` deploys after all checks pass on `main`. It synchronises `data/products.json`, deploys the API, deploys the frontend and verifies both live endpoints. Production deployments are serialised so two runs cannot deploy at the same time.
+
+Create a GitHub Environment named `production`, restrict it to `main`, and add `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` as environment secrets. The API token must be scoped to the target Cloudflare account with Workers and D1 edit access. Never commit the token.
+
+D1 migrations remain a reviewed manual step and are not executed by GitHub Actions. Apply a required migration before merging the code that uses it.
+
+Do not enable Cloudflare Dashboard Git builds for the same Workers while this workflow is active. Keep one deployment path so a second build cannot overwrite the verified release.
 
 ## 4. Verify stored events
 

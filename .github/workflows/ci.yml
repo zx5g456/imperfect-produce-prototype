@@ -1,8 +1,12 @@
-name: CI
+name: CI and deploy
 
 on:
   push:
   pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   verify:
@@ -24,3 +28,50 @@ jobs:
       - run: npm run typecheck
       - run: npm run api:test
       - run: npm run build
+
+  deploy-production:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: production
+      url: https://fresh-choice-imperfect-produce.zx5g456.workers.dev
+    concurrency:
+      group: fresh-choice-production
+      cancel-in-progress: false
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      NEXT_PUBLIC_SITE_URL: https://fresh-choice-imperfect-produce.zx5g456.workers.dev
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Check deployment secrets
+        run: |
+          if [ -z "$CLOUDFLARE_ACCOUNT_ID" ] || [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "Add CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN to the production environment secrets."
+            exit 1
+          fi
+      - run: npm ci
+      - run: npm run setup:api
+      - name: Build production frontend
+        run: npm run build
+      - name: Synchronise product JSON to D1
+        run: npm run products:sync:remote
+      - name: Deploy Python API
+        run: npm run api:deploy
+      - name: Deploy frontend
+        run: npm run web:deploy
+      - name: Verify production endpoints
+        run: |
+          curl --fail --silent --show-error --retry 5 --retry-all-errors --retry-delay 3 \
+            https://fresh-choice-research-api.zx5g456.workers.dev/health
+          curl --fail --silent --show-error --retry 5 --retry-all-errors --retry-delay 3 \
+            https://fresh-choice-imperfect-produce.zx5g456.workers.dev/ > /dev/null
