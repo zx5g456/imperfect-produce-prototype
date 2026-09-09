@@ -5,8 +5,11 @@ const errors = [];
 for (const product of products) {
   const requiredText = [
     'id',
+    'category',
     'standardName',
     'imperfectName',
+    'standardImage',
+    'imperfectImage',
     'unit',
     'appearance',
     'quality',
@@ -23,10 +26,23 @@ for (const product of products) {
   }
 
   if (
+    !Number.isInteger(product.position) ||
     !Number.isInteger(product.originalPriceCents) ||
     !Number.isInteger(product.currentPriceCents)
   ) {
-    errors.push(`${product.id}: prices must use integer cents`);
+    errors.push(`${product.id}: position and prices must use whole numbers`);
+  }
+
+  if (product.position < 1) {
+    errors.push(`${product.id}: position must be greater than zero`);
+  }
+
+  if (product.position > 1000000) {
+    errors.push(`${product.id}: position must be 1000000 or lower`);
+  }
+
+  if (!['not verified', 'verified'].includes(product.sourceStatus)) {
+    errors.push(`${product.id}: sourceStatus must be verified or not verified`);
   }
 
   if (product.currentPriceCents >= product.originalPriceCents) {
@@ -43,6 +59,12 @@ for (const product of products) {
 
 if (new Set(products.map((product) => product.id)).size !== products.length) {
   errors.push('Product IDs must be unique');
+}
+
+if (
+  new Set(products.map((product) => product.position)).size !== products.length
+) {
+  errors.push('Product positions must be unique');
 }
 
 if (errors.length) {

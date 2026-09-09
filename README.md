@@ -2,7 +2,7 @@
 
 An independent, Woolworths-inspired shopping prototype for evaluating how shoppers understand cosmetic appearance, quality status, current price and savings for discounted imperfect produce.
 
-This is a university research prototype. It is not affiliated with Woolworths and does not process real purchases. When a facilitator starts a session, it stores anonymous interaction events and task timing; questionnaire responses remain in the team's approved form.
+This is a university research prototype. It is not affiliated with Woolworths and does not process real purchases. A participant enters their name and assigned A/B condition before starting; the prototype stores that session’s interactions and timing. Questionnaire responses remain in the team's approved form.
 
 ## Live deployment
 
@@ -18,7 +18,7 @@ This is a university research prototype. It is not affiliated with Woolworths an
 
 ## Prototype flows
 
-The **Research setup** control in the top bar creates a stable, shareable open-shopping session for the evaluation. Every session displays the full product range, so the facilitator only chooses the label condition. Condition A displays basic product information. Condition B adds the explanation of appearance, quality status, original price and explicit saving. Product, image, quantity and current price remain the same across conditions.
+The start screen requires a participant name and Condition A or B before it creates a database session and opens the shopping demo. Every session displays the full product range. Condition A displays basic product information. Condition B adds the explanation of appearance, quality status, original price and explicit saving. Product, image, quantity and current price remain the same across conditions.
 
 ## Before formal testing
 
@@ -51,7 +51,7 @@ Use GitHub Issues for tasks, one feature branch per issue, and Pull Requests for
 
 ## Key files
 
-- `app/page.tsx` — shopping demo, researcher-controlled evaluation flows and anonymous event capture
+- `app/page.tsx` — participant start screen, shopping demo and session-linked event capture
 - `lib/research-api.ts` — typed connection between the Next.js frontend and Python API
 - `backend/src/main.py` — FastAPI routes plus local SQLite and D1 adapters
 - `backend/migrations/0001_initial.sql` — production D1/local SQLite schema and initial products

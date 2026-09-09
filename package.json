@@ -17,6 +17,8 @@
     "typecheck": "tsc --noEmit",
     "api:test": "node scripts/python-task.mjs test",
     "verify:data": "node scripts/verify-product-data.mjs",
+    "products:sync:local": "npm run verify:data && node scripts/sync-products-to-d1.mjs --local",
+    "products:sync:remote": "npm run verify:data && node scripts/sync-products-to-d1.mjs --remote",
     "lint": "oxlint",
     "format": "oxfmt"
   },

@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 from backend.src.main import LocalSQLiteRepository, app
 
 
-def test_products_and_anonymous_session_flow(tmp_path: Path, monkeypatch) -> None:
+def test_products_and_participant_session_flow(tmp_path: Path, monkeypatch) -> None:
     database_path = tmp_path / "test.sqlite3"
     LocalSQLiteRepository._initialized_paths.discard(database_path)
     monkeypatch.setenv("DATABASE_PATH", str(database_path))
@@ -33,6 +33,7 @@ def test_products_and_anonymous_session_flow(tmp_path: Path, monkeypatch) -> Non
         created = client.post(
             "/api/sessions",
             json={
+                "participant_name": "  Test   Participant  ",
                 "study_mode": "comparison",
                 "condition": "B",
                 "scenario_index": 1,
@@ -65,7 +66,7 @@ def test_products_and_anonymous_session_flow(tmp_path: Path, monkeypatch) -> Non
 
         with LocalSQLiteRepository(database_path).connect() as connection:
             stored_session = connection.execute(
-                "SELECT completed_at, duration_ms FROM study_sessions WHERE id = ?",
+                "SELECT participant_name, completed_at, duration_ms FROM study_sessions WHERE id = ?",
                 (session_id,),
             ).fetchone()
             event_types = [
@@ -76,6 +77,7 @@ def test_products_and_anonymous_session_flow(tmp_path: Path, monkeypatch) -> Non
                 ).fetchall()
             ]
 
+        assert stored_session["participant_name"] == "Test Participant"
         assert stored_session["completed_at"] is not None
         assert stored_session["duration_ms"] == 2500
         assert event_types == ["product_chosen", "task_completed"]
@@ -104,6 +106,7 @@ def test_event_rejects_unknown_product(tmp_path: Path, monkeypatch) -> None:
         created = client.post(
             "/api/sessions",
             json={
+                "participant_name": "Missing Product Test",
                 "study_mode": "comparison",
                 "condition": "B",
                 "scenario_index": 1,

@@ -65,6 +65,7 @@ export async function loadProducts(signal?: AbortSignal): Promise<Product[]> {
 }
 
 export async function createStudySession(input: {
+  participantName: string;
   studyMode: StudyMode;
   condition: Condition;
   scenarioIndex: number;
@@ -74,6 +75,7 @@ export async function createStudySession(input: {
     {
       method: 'POST',
       body: JSON.stringify({
+        participant_name: input.participantName,
         study_mode: input.studyMode,
         condition: input.condition,
         scenario_index: input.scenarioIndex,

@@ -12,7 +12,6 @@ import {
   Leaf,
   MapPin,
   Search,
-  Settings2,
   ShieldCheck,
   ShoppingCart,
   Sprout,
@@ -343,6 +342,12 @@ export default function Home() {
     'loading' | 'database' | 'fallback'
   >('loading');
   const [condition, setCondition] = useState<Condition>('B');
+  const [participantCondition, setParticipantCondition] =
+    useState<Condition | null>(null);
+  const [participantName, setParticipantName] = useState('');
+  const [activeParticipantName, setActiveParticipantName] = useState('');
+  const [testStarted, setTestStarted] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
   const [studyMode] = useState<StudyMode>('browse');
   const [selected, setSelected] = useState<{
     product: Product;
@@ -351,14 +356,11 @@ export default function Home() {
   const [chosenKeys, setChosenKeys] = useState<string[]>([]);
   const [savedKeys, setSavedKeys] = useState<string[]>([]);
   const [showSavedOnly, setShowSavedOnly] = useState(false);
-  const [researcherOpen, setResearcherOpen] = useState(false);
   const [completed, setCompleted] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [startingSession, setStartingSession] = useState(false);
   const [recordingError, setRecordingError] = useState(false);
-  const [urlReady, setUrlReady] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -376,37 +378,21 @@ export default function Home() {
     return () => controller.abort();
   }, []);
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const urlCondition = params.get('condition');
-
-    if (urlCondition === 'A' || urlCondition === 'B')
-      setCondition(urlCondition);
-    setUrlReady(true);
-  }, []);
-
-  useEffect(() => {
-    if (!urlReady) return;
-
-    const params = new URLSearchParams(window.location.search);
-    params.set('mode', studyMode);
-    params.set('condition', condition);
-    params.delete('scenario');
-    window.history.replaceState(
-      {},
-      '',
-      `${window.location.pathname}?${params.toString()}`,
-    );
-  }, [condition, studyMode, urlReady]);
-
-  function resetSession(next?: { condition?: Condition }) {
-    if (next?.condition) setCondition(next.condition);
+  function resetSession() {
     setSelected(null);
     setChosenKeys([]);
+    setSavedKeys([]);
+    setShowSavedOnly(false);
     setCompleted(false);
     setStartedAt(null);
     setSessionId(null);
     setRecordingError(false);
+    setParticipantName('');
+    setParticipantCondition(null);
+    setActiveParticipantName('');
+    setTestStarted(false);
+    setStartError(null);
+    window.history.replaceState({}, '', window.location.pathname);
   }
 
   function elapsedMs() {
@@ -469,27 +455,42 @@ export default function Home() {
   }
 
   async function startParticipantSession() {
+    const cleanedName = participantName.trim().replace(/\s+/g, ' ');
+    if (!cleanedName || !participantCondition) return;
+
     const localStartedAt = Date.now();
     setStartingSession(true);
     setRecordingError(false);
+    setStartError(null);
     setChosenKeys([]);
     setCompleted(false);
 
     try {
       const session = await createStudySession({
+        participantName: cleanedName,
         studyMode,
-        condition,
+        condition: participantCondition,
         scenarioIndex: 1,
       });
+      setCondition(participantCondition);
+      setActiveParticipantName(cleanedName);
       setSessionId(session.id);
       setDataSource('database');
+      setStartedAt(localStartedAt);
+      setTestStarted(true);
+      window.history.replaceState(
+        {},
+        '',
+        `${window.location.pathname}?condition=${participantCondition}`,
+      );
     } catch {
       setSessionId(null);
       setRecordingError(true);
+      setStartError(
+        'The database could not start this test. Check the connection and try again.',
+      );
     } finally {
-      setStartedAt(localStartedAt);
       setStartingSession(false);
-      setResearcherOpen(false);
     }
   }
 
@@ -509,10 +510,132 @@ export default function Home() {
     }).catch(() => setRecordingError(true));
   }
 
-  async function copySessionLink() {
-    await navigator.clipboard.writeText(window.location.href);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1800);
+  if (!testStarted) {
+    return (
+      <main className="grid min-h-screen place-items-center bg-[#eef4ee] px-4 py-10 text-[#18322a]">
+        <section className="w-full max-w-2xl overflow-hidden rounded-[32px] border border-[#d3ded5] bg-white shadow-[0_24px_70px_rgba(14,63,42,0.12)]">
+          <div className="bg-[#0b4a32] px-6 py-5 text-white sm:px-9">
+            <div className="flex items-center gap-3">
+              <span className="grid size-11 place-items-center rounded-full bg-white/15">
+                <Leaf className="size-5" aria-hidden="true" />
+              </span>
+              <div>
+                <p className="text-xl font-black tracking-[-0.04em]">
+                  fresh choice
+                </p>
+                <p className="text-xs font-semibold text-white/75">
+                  University research prototype
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <form
+            className="space-y-7 p-6 sm:p-9"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void startParticipantSession();
+            }}
+          >
+            <div>
+              <p className="text-sm font-bold uppercase tracking-[0.13em] text-[#17733a]">
+                Welcome
+              </p>
+              <h1 className="mt-2 text-3xl font-black tracking-[-0.04em] sm:text-4xl">
+                Start the shopping test
+              </h1>
+              <p className="mt-3 max-w-xl text-sm leading-6 text-[#5a6d62] sm:text-base">
+                Enter your name and choose the assigned label condition. Your
+                test will begin after the database creates your participant
+                session.
+              </p>
+            </div>
+
+            <div>
+              <label
+                htmlFor="participant-name"
+                className="text-sm font-extrabold text-[#294a38]"
+              >
+                Your name
+              </label>
+              <input
+                id="participant-name"
+                name="participantName"
+                value={participantName}
+                onChange={(event) => setParticipantName(event.target.value)}
+                maxLength={80}
+                autoComplete="name"
+                placeholder="Enter your name"
+                className="mt-2 h-12 w-full rounded-xl border border-[#aebdb3] bg-[#fbfcfa] px-4 text-base outline-none transition placeholder:text-[#8b9890] focus:border-[#1b7f3a] focus:ring-4 focus:ring-[#1b7f3a]/10"
+              />
+            </div>
+
+            <fieldset>
+              <legend className="text-sm font-extrabold text-[#294a38]">
+                Choose a label condition
+              </legend>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                {(['A', 'B'] as Condition[]).map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    aria-pressed={participantCondition === option}
+                    onClick={() => setParticipantCondition(option)}
+                    className={`rounded-2xl border p-4 text-left transition ${participantCondition === option ? 'border-[#1b7f3a] bg-[#edf7ef] ring-4 ring-[#1b7f3a]/10' : 'border-[#dce3dd] bg-white hover:bg-[#f7faf7]'}`}
+                  >
+                    <span className="flex items-center justify-between text-sm font-black text-[#234f37]">
+                      Version {option}
+                      {participantCondition === option && (
+                        <Check className="size-4" aria-hidden="true" />
+                      )}
+                    </span>
+                    <span className="mt-1 block text-xs leading-5 text-[#66766d]">
+                      Use the version assigned for this test.
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+
+            <div className="rounded-2xl border border-[#dfdfbf] bg-[#fff9da] p-4 text-xs leading-5 text-[#62551d]">
+              Your name, selected condition, product interactions and task
+              timing will be stored in the research database. Do not enter an
+              email address, student number or other sensitive information.
+            </div>
+
+            {startError && (
+              <p
+                role="alert"
+                className="rounded-xl border border-[#efc5bd] bg-[#fff2ef] px-4 py-3 text-sm font-semibold text-[#9a2f20]"
+              >
+                {startError}
+              </p>
+            )}
+
+            <div className="flex flex-col-reverse items-stretch justify-between gap-3 sm:flex-row sm:items-center">
+              <p className="text-xs text-[#6c7c73]">
+                {dataSource === 'database'
+                  ? 'Research database connected'
+                  : dataSource === 'loading'
+                    ? 'Checking research database…'
+                    : 'Product preview loaded · database connection required'}
+              </p>
+              <Button
+                type="submit"
+                disabled={
+                  startingSession ||
+                  !participantName.trim() ||
+                  !participantCondition
+                }
+                className="h-12 rounded-xl bg-[#1b7f3a] px-7 text-base font-bold hover:bg-[#12692f]"
+              >
+                {startingSession ? 'Starting test…' : 'Start test'}
+              </Button>
+            </div>
+          </form>
+        </section>
+      </main>
+    );
   }
 
   return (
@@ -522,12 +645,17 @@ export default function Home() {
           <span className="text-[11px] font-bold tracking-[0.11em] sm:text-xs">
             UNIVERSITY RESEARCH PROTOTYPE · NOT A REAL STORE
           </span>
-          <button
-            onClick={() => setResearcherOpen(true)}
-            className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold transition hover:bg-white/20"
-          >
-            <Settings2 className="size-3.5" aria-hidden="true" /> Research setup
-          </button>
+          <div className="flex items-center gap-2">
+            <span className="hidden text-xs font-semibold text-white/80 sm:inline">
+              {activeParticipantName} · Condition {condition}
+            </span>
+            <button
+              onClick={markTaskComplete}
+              className="shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-black text-[#0b4a32] transition hover:bg-[#edf7ef]"
+            >
+              Finish test
+            </button>
+          </div>
         </div>
       </div>
 
@@ -636,9 +764,9 @@ export default function Home() {
               <Clock3 className="size-4" aria-hidden="true" />
               {startedAt
                 ? sessionId && !recordingError
-                  ? 'Anonymous recording active'
+                  ? 'Participant recording active'
                   : 'Session active · recording unavailable'
-                : 'Open Research setup to start'}
+                : 'Return to the start screen'}
             </div>
           </div>
         </section>
@@ -689,10 +817,10 @@ export default function Home() {
             </p>
           ) : (
             <button
-              onClick={() => setResearcherOpen(true)}
+              onClick={resetSession}
               className="rounded-full border border-[#a8b9ad] bg-white px-4 py-2 text-xs font-bold text-[#315643]"
             >
-              Change task
+              Return to start
             </button>
           )}
         </div>
@@ -784,7 +912,8 @@ export default function Home() {
                 <p className="mt-1 text-xs leading-5 text-[#65746b]">
                   Record the participant’s answer, time, hesitation and help
                   requests on the observation sheet. When recording is active,
-                  this prototype stores anonymous clicks and task timing only.
+                  this prototype stores participant-linked clicks and task
+                  timing.
                 </p>
               </div>
             </div>
@@ -906,112 +1035,6 @@ export default function Home() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={researcherOpen} onOpenChange={setResearcherOpen}>
-        <DialogContent className="max-h-[92vh] overflow-y-auto rounded-3xl p-5 sm:max-w-2xl md:p-6">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-black tracking-[-0.03em] text-[#18322a]">
-              Research session setup
-            </DialogTitle>
-            <DialogDescription>
-              The shopping flow is fixed. Choose a label condition before
-              handing the all-product screen to a participant.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-6 py-2">
-            <fieldset>
-              <legend className="text-sm font-extrabold text-[#294a38]">
-                1. Evaluation flow
-              </legend>
-              <div className="mt-3 flex items-center justify-between rounded-xl border border-[#1b7f3a] bg-[#edf7ef] px-4 py-3 text-sm font-semibold text-[#135c2f]">
-                Open shopping demo
-                <Check className="size-4" aria-hidden="true" />
-              </div>
-            </fieldset>
-
-            <fieldset>
-              <legend className="text-sm font-extrabold text-[#294a38]">
-                2. Label condition
-              </legend>
-              <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                <button
-                  onClick={() => resetSession({ condition: 'A' })}
-                  className={`rounded-2xl border p-4 text-left transition ${condition === 'A' ? 'border-[#1b7f3a] bg-[#edf7ef]' : 'border-[#dce3dd] bg-white'}`}
-                >
-                  <span className="text-sm font-black text-[#234f37]">
-                    Condition A · Basic
-                  </span>
-                  <p className="mt-1 text-xs leading-5 text-[#66766d]">
-                    Name, quantity and current price only.
-                  </p>
-                </button>
-                <button
-                  onClick={() => resetSession({ condition: 'B' })}
-                  className={`rounded-2xl border p-4 text-left transition ${condition === 'B' ? 'border-[#1b7f3a] bg-[#edf7ef]' : 'border-[#dce3dd] bg-white'}`}
-                >
-                  <span className="text-sm font-black text-[#234f37]">
-                    Condition B · Enhanced
-                  </span>
-                  <p className="mt-1 text-xs leading-5 text-[#66766d]">
-                    Adds appearance, quality and explicit savings framing.
-                  </p>
-                </button>
-              </div>
-            </fieldset>
-
-            <div className="rounded-2xl border border-[#eadb93] bg-[#fff9da] p-4">
-              <div className="flex items-start gap-3">
-                <Info
-                  className="mt-0.5 size-4 shrink-0 text-[#776100]"
-                  aria-hidden="true"
-                />
-                <div className="text-xs leading-5 text-[#62551d]">
-                  <p className="font-extrabold">
-                    Data check required before formal testing
-                  </p>
-                  <p>
-                    All three product records are currently marked “not
-                    verified”. Replace the sample values only after checking
-                    product name, image, quantity, unit, original price and
-                    current price against the approved source sheet.
-                  </p>
-                  <p className="mt-2 font-semibold">
-                    Data source:{' '}
-                    {dataSource === 'database'
-                      ? 'SQLite/D1 API connected'
-                      : dataSource === 'loading'
-                        ? 'checking API…'
-                        : 'bundled fallback data (recording unavailable)'}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter className="mt-1 items-center rounded-b-3xl sm:justify-between">
-            <Button
-              variant="outline"
-              onClick={copySessionLink}
-              className="h-11 rounded-xl"
-            >
-              {copied ? (
-                <Check aria-hidden="true" />
-              ) : (
-                <ClipboardCheck aria-hidden="true" />
-              )}
-              {copied ? 'Link copied' : 'Copy session link'}
-            </Button>
-            <Button
-              onClick={startParticipantSession}
-              disabled={startingSession}
-              className="h-11 rounded-xl bg-[#1b7f3a] px-5 font-bold"
-            >
-              {startingSession ? 'Starting…' : 'Start participant session'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       <Dialog open={completed} onOpenChange={setCompleted}>
         <DialogContent className="rounded-3xl p-6 sm:max-w-md">
           <div className="mx-auto grid size-14 place-items-center rounded-full bg-[#e9f6ec] text-[#18723a]">
@@ -1019,12 +1042,12 @@ export default function Home() {
           </div>
           <DialogHeader className="text-center">
             <DialogTitle className="text-xl font-black">
-              Task marked complete
+              Test complete
             </DialogTitle>
             <DialogDescription>
               {sessionId && !recordingError
-                ? 'Anonymous interaction and completion time were saved. Continue with the team’s Microsoft Forms questions.'
-                : 'The interface completed the task, but the recording API was unavailable. Record the result on the observation sheet.'}
+                ? `The interactions and completion time for ${activeParticipantName} were saved. Continue with the team’s questionnaire.`
+                : 'The test ended, but the recording API was unavailable. Record the result on the observation sheet.'}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="mt-2 rounded-b-3xl">
@@ -1035,7 +1058,7 @@ export default function Home() {
               }}
               className="h-11 rounded-xl bg-[#1b7f3a] px-5 font-bold"
             >
-              Start another session
+              Start next participant
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,6 +1,7 @@
 [
   {
     "id": "carrots",
+    "position": 1,
     "category": "Fresh produce",
     "standardName": "Fresh carrots",
     "imperfectName": "Naturally wonky carrots",
@@ -18,6 +19,7 @@
   },
   {
     "id": "apples",
+    "position": 2,
     "category": "Fresh produce",
     "standardName": "Red apples",
     "imperfectName": "Naturally unique apples",
@@ -35,6 +37,7 @@
   },
   {
     "id": "capsicum",
+    "position": 3,
     "category": "Fresh produce",
     "standardName": "Red capsicums",
     "imperfectName": "Naturally quirky capsicums",

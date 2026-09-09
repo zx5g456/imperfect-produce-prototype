@@ -18,9 +18,10 @@ The repository already binds the `fresh-choice-research` database in `backend/wr
 
 ```bash
 npx wrangler d1 migrations apply fresh-choice-research --remote --config backend/wrangler.jsonc
+npm run products:sync:remote
 ```
 
-Never place participant identity, contact details or consent records in D1.
+Only store the participant name approved by the study protocol. Never place email addresses, student numbers, contact details or consent records in D1.
 
 ## 2. Deploy the Python API
 
@@ -55,6 +56,7 @@ Use the D1 console in the Cloudflare dashboard, or run:
 
 ```sql
 SELECT
+  s.participant_name,
   s.condition_code,
   s.study_mode,
   s.scenario_index,

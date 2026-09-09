@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field, field_validator
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 MIGRATIONS_DIR = BACKEND_DIR / "migrations"
+PRODUCT_DATA_PATH = BACKEND_DIR.parent / "data" / "products.json"
 DEFAULT_DATABASE_PATH = BACKEND_DIR / ".data" / "prototype.sqlite3"
 
 StudyMode = Literal["browse", "comprehension", "comparison"]
@@ -38,9 +39,18 @@ def to_python(value: Any) -> Any:
 
 
 class SessionCreate(BaseModel):
+    participant_name: str = Field(min_length=1, max_length=80)
     study_mode: StudyMode
     condition: Condition
     scenario_index: int = Field(ge=1, le=100)
+
+    @field_validator("participant_name")
+    @classmethod
+    def participant_name_must_not_be_blank(cls, value: str) -> str:
+        cleaned = " ".join(value.split())
+        if not cleaned:
+            raise ValueError("participant name is required")
+        return cleaned
 
 
 class SessionCreated(BaseModel):
@@ -126,6 +136,67 @@ def product_to_api(row: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def sync_local_product_catalog(connection: sqlite3.Connection) -> None:
+    products = json.loads(PRODUCT_DATA_PATH.read_text(encoding="utf-8"))
+    if not isinstance(products, list) or not products:
+        raise ValueError("data/products.json must contain at least one product")
+
+    product_ids = [product["id"] for product in products]
+    placeholders = ", ".join("?" for _ in product_ids)
+    connection.execute(
+        f"DELETE FROM products WHERE id NOT IN ({placeholders})", product_ids
+    )
+    connection.execute("UPDATE products SET position = position + 1000000000")
+
+    for product in products:
+        connection.execute(
+            """
+            INSERT INTO products (
+              id, position, category, standard_name, imperfect_name,
+              standard_image, imperfect_image, unit,
+              original_price_cents, current_price_cents,
+              appearance, quality,
+              condition_a_information, condition_b_information,
+              scenario, source_status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+              position = excluded.position,
+              category = excluded.category,
+              standard_name = excluded.standard_name,
+              imperfect_name = excluded.imperfect_name,
+              standard_image = excluded.standard_image,
+              imperfect_image = excluded.imperfect_image,
+              unit = excluded.unit,
+              original_price_cents = excluded.original_price_cents,
+              current_price_cents = excluded.current_price_cents,
+              appearance = excluded.appearance,
+              quality = excluded.quality,
+              condition_a_information = excluded.condition_a_information,
+              condition_b_information = excluded.condition_b_information,
+              scenario = excluded.scenario,
+              source_status = excluded.source_status
+            """,
+            (
+                product["id"],
+                product["position"],
+                product["category"],
+                product["standardName"],
+                product["imperfectName"],
+                product["standardImage"],
+                product["imperfectImage"],
+                product["unit"],
+                product["originalPriceCents"],
+                product["currentPriceCents"],
+                product["appearance"],
+                product["quality"],
+                product["conditionAInformation"],
+                product["conditionBInformation"],
+                product["scenario"],
+                product["sourceStatus"],
+            ),
+        )
+
+
 class LocalSQLiteRepository:
     """SQLite repository used by the standard local FastAPI server."""
 
@@ -160,6 +231,7 @@ class LocalSQLiteRepository:
                         "INSERT INTO local_schema_migrations (name, applied_at) VALUES (?, ?)",
                         (migration_path.name, utc_now()),
                     )
+                sync_local_product_catalog(connection)
             self._initialized_paths.add(database_path)
 
     def connect(self) -> sqlite3.Connection:
@@ -189,11 +261,13 @@ class LocalSQLiteRepository:
             connection.execute(
                 """
                 INSERT INTO study_sessions
-                  (id, study_mode, condition_code, scenario_index, started_at)
-                VALUES (?, ?, ?, ?, ?)
+                  (id, participant_name, study_mode, condition_code,
+                   scenario_index, started_at)
+                VALUES (?, ?, ?, ?, ?, ?)
                 """,
                 (
                     session_id,
+                    payload.participant_name,
                     payload.study_mode,
                     payload.condition,
                     payload.scenario_index,
@@ -311,10 +385,12 @@ class D1Repository:
         await self.run(
             """
             INSERT INTO study_sessions
-              (id, study_mode, condition_code, scenario_index, started_at)
-            VALUES (?, ?, ?, ?, ?)
+              (id, participant_name, study_mode, condition_code,
+               scenario_index, started_at)
+            VALUES (?, ?, ?, ?, ?, ?)
             """,
             session_id,
+            payload.participant_name,
             payload.study_mode,
             payload.condition,
             payload.scenario_index,
@@ -393,7 +469,7 @@ def repository_for(request: Request) -> Repository:
 app = FastAPI(
     title="Fresh Choice Research API",
     version="1.0.0",
-    description="Anonymous interaction logging for the imperfect-produce study.",
+    description="Participant-linked interaction logging for the produce study.",
 )
 
 app.add_middleware(
