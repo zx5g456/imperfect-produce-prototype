@@ -18,13 +18,7 @@ This is a university research prototype. It is not affiliated with Woolworths an
 
 ## Prototype flows
 
-The **Research setup** control in the top bar creates a stable, shareable session URL for:
-
-- open shopping demo;
-- label-comprehension tasks for Evaluation Question 1.1; and
-- controlled Condition A / Condition B comparisons for Evaluation Question 2.2.
-
-Every flow displays the full product range, so the facilitator does not need to choose an individual product scenario. Condition A displays basic product information. Condition B adds the explanation of appearance, quality status, original price and explicit saving. Product, image, quantity and current price remain the same across conditions.
+The **Research setup** control in the top bar creates a stable, shareable open-shopping session for the evaluation. Every session displays the full product range, so the facilitator only chooses the label condition. Condition A displays basic product information. Condition B adds the explanation of appearance, quality status, original price and explicit saving. Product, image, quantity and current price remain the same across conditions.
 
 ## Before formal testing
 

@@ -41,12 +41,6 @@ import {
 
 const initialProducts = fallbackProducts as Product[];
 
-const MODE_LABELS: Record<StudyMode, string> = {
-  browse: 'Open shopping demo',
-  comprehension: 'Label comprehension (EQ 1.1)',
-  comparison: 'A/B choice comparison (EQ 2.2)',
-};
-
 function money(cents: number) {
   return new Intl.NumberFormat('en-AU', {
     style: 'currency',
@@ -324,7 +318,7 @@ export default function Home() {
     'loading' | 'database' | 'fallback'
   >('loading');
   const [condition, setCondition] = useState<Condition>('B');
-  const [studyMode, setStudyMode] = useState<StudyMode>('browse');
+  const [studyMode] = useState<StudyMode>('browse');
   const [selected, setSelected] = useState<{
     product: Product;
     kind: 'standard' | 'imperfect';
@@ -337,6 +331,7 @@ export default function Home() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [startingSession, setStartingSession] = useState(false);
   const [recordingError, setRecordingError] = useState(false);
+  const [urlReady, setUrlReady] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -357,19 +352,15 @@ export default function Home() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const urlCondition = params.get('condition');
-    const urlMode = params.get('mode');
 
     if (urlCondition === 'A' || urlCondition === 'B')
       setCondition(urlCondition);
-    if (
-      urlMode === 'browse' ||
-      urlMode === 'comprehension' ||
-      urlMode === 'comparison'
-    )
-      setStudyMode(urlMode);
+    setUrlReady(true);
   }, []);
 
   useEffect(() => {
+    if (!urlReady) return;
+
     const params = new URLSearchParams(window.location.search);
     params.set('mode', studyMode);
     params.set('condition', condition);
@@ -379,10 +370,9 @@ export default function Home() {
       '',
       `${window.location.pathname}?${params.toString()}`,
     );
-  }, [condition, studyMode]);
+  }, [condition, studyMode, urlReady]);
 
-  function resetSession(next?: { mode?: StudyMode; condition?: Condition }) {
-    if (next?.mode) setStudyMode(next.mode);
+  function resetSession(next?: { condition?: Condition }) {
     if (next?.condition) setCondition(next.condition);
     setSelected(null);
     setChosenKey(null);
@@ -813,8 +803,8 @@ export default function Home() {
               Research session setup
             </DialogTitle>
             <DialogDescription>
-              Choose a stable task and label condition before handing the
-              all-product screen to a participant.
+              The shopping flow is fixed. Choose a label condition before
+              handing the all-product screen to a participant.
             </DialogDescription>
           </DialogHeader>
 
@@ -823,19 +813,9 @@ export default function Home() {
               <legend className="text-sm font-extrabold text-[#294a38]">
                 1. Evaluation flow
               </legend>
-              <div className="mt-3 grid gap-2">
-                {(Object.keys(MODE_LABELS) as StudyMode[]).map((mode) => (
-                  <button
-                    key={mode}
-                    onClick={() => resetSession({ mode })}
-                    className={`flex items-center justify-between rounded-xl border px-4 py-3 text-left text-sm font-semibold transition ${studyMode === mode ? 'border-[#1b7f3a] bg-[#edf7ef] text-[#135c2f]' : 'border-[#dce3dd] bg-white text-[#42594c] hover:bg-[#f7faf7]'}`}
-                  >
-                    {MODE_LABELS[mode]}
-                    {studyMode === mode && (
-                      <Check className="size-4" aria-hidden="true" />
-                    )}
-                  </button>
-                ))}
+              <div className="mt-3 flex items-center justify-between rounded-xl border border-[#1b7f3a] bg-[#edf7ef] px-4 py-3 text-sm font-semibold text-[#135c2f]">
+                Open shopping demo
+                <Check className="size-4" aria-hidden="true" />
               </div>
             </fieldset>
 
